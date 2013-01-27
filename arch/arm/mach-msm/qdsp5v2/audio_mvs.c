@@ -301,6 +301,7 @@ struct audio_mvs_info_type {
 	uint32_t buf_free_cnt;
 	uint32_t rate_type;
 	uint32_t dtx_mode;
+	struct min_max_rate min_max_rate;
 
 	struct msm_rpc_endpoint *rpc_endpt;
 	uint32_t rpc_prog;
@@ -317,9 +318,9 @@ struct audio_mvs_info_type {
 
 	struct task_struct *task;
 
+	wait_queue_head_t in_wait;
 	wait_queue_head_t wait;
 	wait_queue_head_t mode_wait;
-	wait_queue_head_t in_wait;
 	wait_queue_head_t out_wait;
 
 	struct mutex lock;
@@ -414,8 +415,10 @@ static int audio_mvs_setup_mode(struct audio_mvs_info_type *audio)
 
 		/* Set EVRC mode. */
 		memset(&set_voc_mode_msg, 0, sizeof(set_voc_mode_msg));
-		set_voc_mode_msg.min_rate = cpu_to_be32(audio->rate_type);
-		set_voc_mode_msg.max_rate = cpu_to_be32(audio->rate_type);
+		set_voc_mode_msg.min_rate =
+				cpu_to_be32(audio->min_max_rate.min_rate);
+		set_voc_mode_msg.max_rate =
+				cpu_to_be32(audio->min_max_rate.max_rate);
 
 		msm_rpc_setup_req(&set_voc_mode_msg.rpc_hdr,
 				  audio->rpc_prog,
@@ -1055,7 +1058,7 @@ static void audio_mvs_process_rpc_request(uint32_t procedure,
 				dl_reply.cdc_param.gnr_arg.param1 = cpu_to_be32(
 					buf_node->frame.frame_type);
 				dl_reply.cdc_param.gnr_arg.param2 =
-				cpu_to_be32(buf_node->frame.frame_type);
+						cpu_to_be32(audio->rate_type);
 				dl_reply.cdc_param.\
 						gnr_arg.valid_pkt_status_ptr =
 							cpu_to_be32(0x00000001);
@@ -1071,7 +1074,7 @@ static void audio_mvs_process_rpc_request(uint32_t procedure,
 					cpu_to_be32(AUDIO_MVS_PKT_NORMAL);
 			} else if (frame_mode == MVS_FRAME_MODE_VOC_RX) {
 				dl_reply.cdc_param.gnr_arg.param1 =
-						cpu_to_be32(audio->rate_type);
+				cpu_to_be32(buf_node->frame.frame_type);
 				dl_reply.cdc_param.gnr_arg.param2 = 0;
 				dl_reply.cdc_param.\
 						gnr_arg.valid_pkt_status_ptr =
@@ -1497,52 +1500,40 @@ static ssize_t audio_mvs_write(struct file *file,
 
 	pr_debug("%s:\n", __func__);
 
-	rc = wait_event_interruptible_timeout(audio->in_wait,
-		(!list_empty(&audio->free_in_queue) ||
-		audio->state == AUDIO_MVS_STOPPED), 1 * HZ);
-	if (rc > 0) {
-		mutex_lock(&audio->in_lock);
-		if (audio->state == AUDIO_MVS_STARTED) {
+	mutex_lock(&audio->in_lock);
+	if (audio->state == AUDIO_MVS_STARTED) {
 		if (count <= sizeof(struct q5v2_msm_audio_mvs_frame)) {
-				if (!list_empty(&audio->free_in_queue)) {
-					buf_node = list_first_entry(
-						&audio->free_in_queue,
+			if (!list_empty(&audio->free_in_queue)) {
+				buf_node =
+					list_first_entry(&audio->free_in_queue,
 						struct audio_mvs_buf_node,
 						list);
-					list_del(&buf_node->list);
+				list_del(&buf_node->list);
 
-					rc = copy_from_user(&buf_node->frame,
-							    buf,
-							    count);
+				rc = copy_from_user(&buf_node->frame,
+						    buf,
+						    count);
 
-					list_add_tail(&buf_node->list,
-						      &audio->in_queue);
-				} else {
-					pr_err("%s: No free DL buffs\n", __func__);
-				}
+				list_add_tail(&buf_node->list,
+					      &audio->in_queue);
 			} else {
-				pr_err("%s: Write count %d < sizeof(frame) %d",
-					__func__, count,
-			       sizeof(struct q5v2_msm_audio_mvs_frame));
-
-				rc = -ENOMEM;
+				pr_err("%s: No free DL buffs\n", __func__);
 			}
 		} else {
-			pr_err("%s: Write performed in invalid state %d\n",
-				__func__, audio->state);
+			pr_err("%s: Write count %d < sizeof(frame) %d",
+			       __func__, count,
+			       sizeof(struct q5v2_msm_audio_mvs_frame));
 
-			rc = -EPERM;
+			rc = -ENOMEM;
 		}
-		mutex_unlock(&audio->in_lock);
-	} else if (rc == 0) {
-		pr_err("%s: No free DL buffs\n", __func__);
-
-		rc = -ETIMEDOUT;
 	} else {
-		pr_err("%s: write was interrupted\n", __func__);
+		pr_err("%s: Write performed in invalid state %d\n",
+		       __func__, audio->state);
 
-		rc = -ERESTARTSYS;
+		rc = -EPERM;
 	}
+	mutex_unlock(&audio->in_lock);
+
 	return rc;
 }
 
@@ -1565,6 +1556,8 @@ static long audio_mvs_ioctl(struct file *file,
 		mutex_lock(&audio->lock);
 		config.mvs_mode = audio->mvs_mode;
 		config.rate_type = audio->rate_type;
+		config.min_max_rate.min_rate = audio->min_max_rate.min_rate;
+		config.min_max_rate.max_rate = audio->min_max_rate.max_rate;
 		mutex_unlock(&audio->lock);
 
 		rc = copy_to_user((void *)arg, &config, sizeof(config));
@@ -1589,6 +1582,10 @@ static long audio_mvs_ioctl(struct file *file,
 				audio->mvs_mode = config.mvs_mode;
 				audio->rate_type = config.rate_type;
 				audio->dtx_mode = config.dtx_mode;
+				audio->min_max_rate.min_rate =
+						config.min_max_rate.min_rate;
+				audio->min_max_rate.max_rate =
+						config.min_max_rate.max_rate;
 			} else {
 				pr_err("%s: Set confg called in state %d\n",
 				       __func__, audio->state);
