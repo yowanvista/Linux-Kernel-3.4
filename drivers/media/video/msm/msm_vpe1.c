@@ -881,7 +881,7 @@ static int vpe_proc_general(struct msm_vpe_cmd *cmd)
 		vpe_update_scaler_with_dis(&(vpe_buf->vpe_crop),
 					&(vpe_ctrl->dis_offset));
 
-		msm_send_frame_to_vpe(vpe_buf->p0_phy, vpe_buf->p1_phy,
+		msm_send_frame_to_vpe(vpe_buf->y_phy, vpe_buf->cbcr_phy,
 						&(vpe_buf->ts), OUTPUT_TYPE_V);
 
 		if (!qcmd || !atomic_read(&qcmd->on_heap)) {
@@ -919,9 +919,9 @@ static void vpe_addr_convert(struct msm_vpe_phy_info *pinfo,
 
 	CDBG("In vpe_addr_convert output_id = %d\n", pinfo->output_id);
 
-	pinfo->p0_phy =
+	pinfo->y_phy =
 		((struct vpe_message *)data)->_u.msgOut.p0_Buffer;
-	pinfo->p1_phy =
+	pinfo->cbcr_phy =
 		((struct vpe_message *)data)->_u.msgOut.p1_Buffer;
 	*ext  = vpe_ctrl->extdata;
 	*elen = vpe_ctrl->extlen;
@@ -987,10 +987,10 @@ int vpe_config_axi(struct axidata *ad)
 
 	regp1 = &(ad->region[0]);
 	/* for video  Y address */
-	p1 = (regp1->paddr + regp1->info.planar0_off);
+	p1 = (regp1->paddr + regp1->info.y_off);
 	msm_io_w(p1, vpe_device->vpebase + VPE_OUTP0_ADDR_OFFSET);
 	/* for video  CbCr address */
-	p1 = (regp1->paddr + regp1->info.planar1_off);
+	p1 = (regp1->paddr + regp1->info.cbcr_off);
 	msm_io_w(p1, vpe_device->vpebase + VPE_OUTP1_ADDR_OFFSET);
 
 	return 0;
