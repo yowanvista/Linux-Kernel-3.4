@@ -86,10 +86,9 @@ static void *res_trk_pmem_map
 				&iova,
 				&buffer_size,
 				UNCACHED, 0);
-		if (ret || !iova) {
-			DDL_MSG_ERROR(
-			"%s():DDL ION client iommu map failed, ret = %d iova = 0x%lx\n",
-			__func__, ret, iova);
+		if (ret) {
+			DDL_MSG_ERROR("%s():DDL ION client iommu map failed\n",
+						 __func__);
 			goto ion_unmap_bail_out;
 		}
 		addr->mapped_buffer = NULL;
@@ -437,10 +436,6 @@ bail_out:
 static struct ion_client *res_trk_create_ion_client(void){
 	struct ion_client *video_client;
 	video_client = msm_ion_client_create(-1, "video_client");
-	if (IS_ERR_OR_NULL(video_client)) {
-		VCDRES_MSG_ERROR("%s: Unable to create ION client\n", __func__);
-		video_client = NULL;
-	}
 	return video_client;
 }
 
