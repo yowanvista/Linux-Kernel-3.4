@@ -6577,7 +6577,7 @@ void wlan_setup_power(int on, int flag)
 			if (gpio_tlmm_config (GPIO_CFG(WLAN_EN_GPIO, 0, GPIO_CFG_OUTPUT, GPIO_CFG_PULL_UP, GPIO_CFG_8MA), GPIO_CFG_ENABLE))
 			{
 					printk (KERN_ERR "%s: Unable configure WLAN_EN_GPIO\n", __func__);
-					return -EIO;
+					return;
 			}
 
 			gpio_set_value (WLAN_EN_GPIO, on);
@@ -6590,7 +6590,7 @@ void wlan_setup_power(int on, int flag)
 				if (gpio_tlmm_config (GPIO_CFG(WLAN_EN_GPIO, 0, GPIO_CFG_OUTPUT, GPIO_CFG_PULL_UP, GPIO_CFG_8MA), GPIO_CFG_ENABLE))
 				{
 						printk (KERN_ERR "%s: Unable configure WLAN_EN_GPIO\n", __func__);
-						return -EIO;
+						return;
 				}
 
 				gpio_set_value (WLAN_EN_GPIO, on);
@@ -6604,7 +6604,7 @@ void wlan_setup_power(int on, int flag)
 		if (gpio_tlmm_config (GPIO_CFG(WLAN_RESET, 0, GPIO_CFG_OUTPUT, GPIO_CFG_PULL_UP, GPIO_CFG_8MA), GPIO_CFG_ENABLE))
 		{
 				printk (KERN_ERR "%s: Unable configure WLAN_RESET \n", __func__);
-				return -EIO;
+				return;
 		}
 
 		mdelay (100);
@@ -6629,7 +6629,7 @@ void wlan_setup_power(int on, int flag)
 		if (gpio_tlmm_config (GPIO_CFG(WLAN_RESET, 0, GPIO_CFG_OUTPUT, GPIO_CFG_PULL_UP, GPIO_CFG_8MA), GPIO_CFG_ENABLE))
 		{
 			printk (KERN_ERR "%s: Unable configure WLAN_RESET \n", __func__);
-			return -EIO;
+			return;
 		}
 
 		gpio_set_value (WLAN_RESET, on);
