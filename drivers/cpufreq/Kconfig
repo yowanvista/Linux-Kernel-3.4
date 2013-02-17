@@ -152,11 +152,11 @@ config CPU_FREQ_DEFAULT_GOV_USERSPACE
 	  to enable the userspace governor manually.
 
 config CPU_FREQ_DEFAULT_GOV_WHEATLEY
-        bool "wheatley"
-        select CPU_FREQ_GOV_WHEATLEY
-        select CPU_FREQ_GOV_PERFORMANCE
-        help
-          Use the CPUFreq governor 'wheatley' as default.
+	bool "wheatley"
+	select CPU_FREQ_GOV_WHEATLEY
+	select CPU_FREQ_GOV_PERFORMANCE
+	help
+	  Use the CPUFreq governor 'wheatley' as default.
 
 endchoice
 
@@ -305,8 +305,8 @@ config CPU_FREQ_GOV_USERSPACE
 	  If in doubt, say Y.
 
 config CPU_FREQ_GOV_WHEATLEY
-   tristate "'wheatley' cpufreq governor"
-   depends on CPU_FREQ
+	tristate "'wheatley' cpufreq governor"
+	depends on CPU_FREQ
    
 
 menu "x86 CPU frequency scaling drivers"
