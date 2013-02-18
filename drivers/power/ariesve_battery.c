@@ -1090,7 +1090,15 @@ static int msm_batt_check_level(int battery_level)
 		battery_level = 100;
 	}
 	*/
-	if ( (msm_batt_info.batt_full_check == 0) && (battery_level == 100) )
+#ifdef CONFIG_BLX
+	if (battery_level >= get_charginglimit())
+	{
+		battery_level = get_charginglimit();	// not yet fully charged
+		
+		/*msm_batt_chg_en(STOP_CHARGING);*/
+	}
+	#else
+        if ( (msm_batt_info.batt_full_check == 0) && (battery_level == 100) )
 	{
 		battery_level = 99;	// not yet fully charged
 	}
