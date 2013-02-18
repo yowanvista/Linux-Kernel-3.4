@@ -1102,6 +1102,7 @@ static int msm_batt_check_level(int battery_level)
 	{
 		battery_level = 99;	// not yet fully charged
 	}
+#endif
 /*
 	else if ( (battery_level == 0)
 #ifdef MAX17043_FUEL_GAUGE
