@@ -39,6 +39,10 @@
 #include <asm/io.h>
 #include <linux/uaccess.h>
 
+#ifdef CONFIG_FORCE_FAST_CHARGE
+#include <linux/fastchg.h>
+#endif
+
 // #define DEBUG 1
 #include <linux/device.h>
 
@@ -731,7 +735,7 @@ static DEVICE_ATTR(dock, S_IRUGO |S_IWUGO | S_IRUSR | S_IWUSR, dock_switch_show,
 
 void usb_switch_state(void)
 {
-                usb_switch_mode(SWITCH_MSM);
+    usb_switch_mode(SWITCH_MSM);
 }
 
 extern int set_tsp_for_ta_detect(int state);
@@ -752,6 +756,19 @@ static void fsa9480_process_device(u8 dev1, u8 dev2, u8 attach)
 	
 	if (vdev1)
 	{
+#ifdef CONFIG_FORCE_FAST_CHARGE
+		if(
+			(vdev1 == CRA_USB) && 
+			(
+				(force_fast_charge && (!(attach & DETACH) || !curr_usb_status)) || 
+				(!force_fast_charge && (attach & DETACH) && curr_ta_status)
+			)
+		)
+		{
+			vdev1=CRA_DEDICATED_CHG;
+			DEBUG_FSA9480("USB --- FORCE FAST CHARGE\n");
+		}
+#endif
 		switch (vdev1)
 		{		
 			case CRA_AUDIO_TYPE1:
