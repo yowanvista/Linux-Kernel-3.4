@@ -3,8 +3,10 @@
 #ifndef _LINUX_BLX_H
 #define _LINUX_BLX_H
 
-#define MAX_CHARGINGLIMIT 98
+// for kernels including the 100% charging 'fix' change this to 100:
+#define MAX_CHARGINGLIMIT 100
 
 int get_charginglimit(void);
 
 #endif
+

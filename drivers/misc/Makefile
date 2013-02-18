@@ -36,7 +36,6 @@ obj-$(CONFIG_DS1682)		+= ds1682.o
 obj-$(CONFIG_TI_DAC7512)	+= ti_dac7512.o
 obj-$(CONFIG_UID_STAT)		+= uid_stat.o
 obj-$(CONFIG_C2PORT)		+= c2port/
-obj-$(CONFIG_BLX)               += blx.o
 obj-$(CONFIG_IWMC3200TOP)      += iwmc3200top/
 obj-$(CONFIG_HMC6352)		+= hmc6352.o
 obj-y				+= eeprom/
@@ -69,4 +68,6 @@ obj-$(CONFIG_QFP_FUSE) += qfp_fuse.o
 obj-$(CONFIG_SAMSUNG_JACK) += sec_jack.o
 obj-$(CONFIG_SAMSUNG_FM_SI4709) += fm_si4709/
 obj-$(CONFIG_VIBETONZ)		+= vibetonz/
+obj-$(CONFIG_BLX) += blx.o
+
 

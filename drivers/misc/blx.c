@@ -86,14 +86,14 @@ static int __init blx_init(void)
 
     ret = misc_register(&blx_device);
 
-    if (ret) 
+    if (ret)
 	{
 	    pr_err("%s misc_register(%s) fail\n", __FUNCTION__, blx_device.name);
 
 	    return 1;
 	}
 
-    if (sysfs_create_group(&blx_device.this_device->kobj, &blx_group) < 0) 
+    if (sysfs_create_group(&blx_device.this_device->kobj, &blx_group) < 0)
 	{
 	    pr_err("%s sysfs_create_group fail\n", __FUNCTION__);
 	    pr_err("Failed to create sysfs group for device (%s)!\n", blx_device.name);
@@ -103,3 +103,4 @@ static int __init blx_init(void)
 }
 
 device_initcall(blx_init);
+

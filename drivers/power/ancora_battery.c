@@ -65,6 +65,10 @@ struct work_struct *p_batt_init;
 #include <linux/mfd/pmic8058.h>
 #include <linux/wakelock.h>
 
+#ifdef CONFIG_BLX
+#include <linux/blx.h>
+#endif
+
 #ifdef CONFIG_WIRELESS_CHARGING
 #define IRQ_WC_DETECT PM8058_GPIO_IRQ(PMIC8058_IRQ_BASE, (PM8058_GPIO(35)))
 #define GPIO_WC_DETECT PM8058_GPIO_PM_TO_SYS(PM8058_GPIO(35))
@@ -1200,6 +1204,23 @@ static int msm_batt_check_full_charging(int chg_current_adc)
 		}
 	}
 
+#ifdef CONFIG_BLX
+	// check Battery Life Extender charging limit
+	if (msm_batt_info.batt_capacity >= get_charginglimit())
+	{
+		// Battery Life Extender charging limit reached !
+		pr_info("[BATT] %s: Battery Life eXtender - Charging limit reached, cut off charging current! (capacity=%d, voltage=%d, ICHG=%d)\n",
+			__func__, msm_batt_info.batt_capacity, msm_batt_info.battery_voltage, chg_current_adc);
+		msm_batt_info.batt_full_check = 1;
+		msm_batt_info.batt_recharging = 0;
+		msm_batt_info.batt_status = POWER_SUPPLY_STATUS_FULL;
+		time_after_under_tsh = 0;
+		msm_batt_chg_en(STOP_CHARGING);
+		return 1;
+	}
+#endif
+
+
 	return 0;
 }
 
@@ -1207,6 +1228,16 @@ static int msm_batt_check_recharging(void)
 {
 	static unsigned int time_after_vol1 = 0, time_after_vol2 = 0;
 
+#ifdef CONFIG_BLX
+	// check Battery Life Extender charging limit
+	if (msm_batt_info.batt_capacity >= get_charginglimit())
+	{
+		// Battery Life Extender charging limit reached !
+		pr_info("[BATT] %s: Battery Life eXtender - Charging limit reached, no need to start recharging! (capacity=%d, voltage=%d)\n",
+			__func__, msm_batt_info.batt_capacity, msm_batt_info.battery_voltage);
+		return 0;
+	}
+#endif
 
 	if ( (msm_batt_info.batt_full_check == 0) ||
 		(msm_batt_info.batt_recharging == 1) ||
@@ -3106,4 +3137,5 @@ MODULE_AUTHOR("Kiran Kandi, Qualcomm Innovation Center, Inc.");
 MODULE_DESCRIPTION("Battery driver for Qualcomm MSM chipsets.");
 MODULE_VERSION("1.0");
 MODULE_ALIAS("platform:ancora_battery");
+
 
