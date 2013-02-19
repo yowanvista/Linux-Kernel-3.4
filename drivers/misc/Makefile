@@ -50,7 +50,6 @@ obj-y				+= lis3lv02d/
 obj-y				+= carma/
 obj-$(CONFIG_WL127X_RFKILL)	+= wl127x-rfkill.o
 obj-$(CONFIG_APANIC)		+= apanic.o
-<<<<<<< HEAD
 obj-$(CONFIG_TSIF) += msm_tsif.o
 msm_tsif-objs := tsif.o
 obj-$(CONFIG_TSIF_CHRDEV) += tsif_chrdev.o
@@ -72,12 +71,3 @@ obj-$(CONFIG_VIBETONZ)		+= vibetonz/
 obj-$(CONFIG_BLX) += blx.o
 
 
-=======
-obj-$(CONFIG_SENSORS_AK8975)	+= akm8975.o
-obj-y				+= inv_mpu/
-obj-$(CONFIG_SEC_MODEM)		+= modem_if/
-obj-$(CONFIG_USB_SWITCH_FSA9480)	+= fsa9480.o
-obj-$(CONFIG_OMAP_DIE_TEMP_SENSOR)	+= omap_temp_sensor.o
-obj-$(CONFIG_LEDS_AN30259A)	+= leds-an30259a.o
-obj-$(CONFIG_CUSTOM_VOLTAGE)	+= custom_voltage.o
->>>>>>> 05ab84f... Added Custom Voltage version 3.
