@@ -985,6 +985,15 @@ static int msm_batt_average_chg_current(int chg_current_adc)
 	return ret;
 }
 
+#ifdef CONFIG_BLX
+static int msm_batt_blx_charging_limit_reached(void)
+{
+	// check Battery Life Extender charging limit (only if the chosen charging limit is less than 100%)
+	int charging_limit = get_charginglimit();
+	return (charging_limit < 100 && msm_batt_info.batt_capacity >= charging_limit);
+}
+#endif
+
 static int msm_batt_check_full_charging(int chg_current_adc)
 {
 	static unsigned int time_after_under_tsh = 0;
@@ -1033,18 +1042,32 @@ static int msm_batt_check_full_charging(int chg_current_adc)
 	}
 
 #ifdef CONFIG_BLX
+	static unsigned int time_after_under_blx_limit = 0;
+
 	// check Battery Life Extender charging limit
-	if (msm_batt_info.batt_capacity >= get_charginglimit())
+	if (msm_batt_blx_charging_limit_reached())
 	{
-		// Battery Life Extender charging limit reached !
-		pr_info("[BATT] %s: Battery Life eXtender - Charging limit reached, cut off charging current! (capacity=%d, voltage=%d, ICHG=%d)\n",
-			__func__, msm_batt_info.batt_capacity, msm_batt_info.battery_voltage, chg_current_adc);
-		msm_batt_info.batt_full_check = 1;
-		msm_batt_info.batt_recharging = 0;
-		msm_batt_info.batt_status = POWER_SUPPLY_STATUS_FULL;
-		time_after_under_tsh = 0;
-		msm_batt_chg_en(STOP_CHARGING);
-		return 1;
+		if (time_after_under_blx_limit == 0)
+			time_after_under_blx_limit = jiffies;
+		else
+		{
+			if (time_after((unsigned long)jiffies, (unsigned long)(time_after_under_blx_limit + TOTAL_WATING_TIME)))
+			{
+				// Battery Life Extender charging limit reached !
+				pr_info("[BATT] %s: Battery Life eXtender - Charging limit reached, cut off charging current! (capacity=%d, voltage=%d, ICHG=%d)\n",
+					__func__, msm_batt_info.batt_capacity, msm_batt_info.battery_voltage, chg_current_adc);
+				msm_batt_info.batt_full_check = 1;
+				msm_batt_info.batt_recharging = 0;
+				msm_batt_info.batt_status = POWER_SUPPLY_STATUS_FULL;
+				time_after_under_blx_limit = 0;
+				msm_batt_chg_en(STOP_CHARGING);
+				return 1;
+			}
+		}
+	}
+	else
+	{
+		time_after_under_blx_limit = 0;
 	}
 #endif
 
@@ -1057,7 +1080,7 @@ static int msm_batt_check_recharging(void)
 
 #ifdef CONFIG_BLX
 	// check Battery Life Extender charging limit
-	if (msm_batt_info.batt_capacity >= get_charginglimit())
+	if (msm_batt_blx_charging_limit_reached())
 	{
 		// Battery Life Extender charging limit reached !
 		pr_info("[BATT] %s: Battery Life eXtender - Charging limit reached, no need to start recharging! (capacity=%d, voltage=%d)\n",
