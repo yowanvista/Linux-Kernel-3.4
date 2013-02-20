@@ -1138,7 +1138,7 @@ static int msm_batt_check_recharging(void)
 static int msm_batt_check_level(int battery_level)
 {
 	if (msm_batt_info.batt_full_check == 0 && battery_level == 100)
-		battery_level = 99;	// not yet fully charged
+		battery_level = 100;	// fully charged
 
 	if (msm_batt_info.batt_capacity != battery_level)
 	{
