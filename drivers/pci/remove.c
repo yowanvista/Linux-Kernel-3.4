@@ -19,7 +19,11 @@ static void pci_free_resources(struct pci_dev *dev)
 
 static void pci_stop_dev(struct pci_dev *dev)
 {
+<<<<<<< HEAD
   pci_pme_active(dev, false);
+=======
+	pci_pme_active(dev, false);
+>>>>>>> 322615c07968eaec10c7a3836f6fb200273c4611
 
 	if (dev->is_added) {
 		pci_proc_detach_device(dev);

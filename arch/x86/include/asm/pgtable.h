@@ -142,6 +142,7 @@ static inline unsigned long pmd_pfn(pmd_t pmd)
 	return (pmd_val(pmd) & PTE_PFN_MASK) >> PAGE_SHIFT;
 }
 
+<<<<<<< HEAD
 
 static inline unsigned long pud_pfn(pud_t pud)
 {
@@ -149,6 +150,13 @@ static inline unsigned long pud_pfn(pud_t pud)
 }
 
 
+=======
+static inline unsigned long pud_pfn(pud_t pud)
+{
+	return (pud_val(pud) & PTE_PFN_MASK) >> PAGE_SHIFT;
+}
+
+>>>>>>> 322615c07968eaec10c7a3836f6fb200273c4611
 #define pte_page(pte)	pfn_to_page(pte_pfn(pte))
 
 static inline int pmd_large(pmd_t pte)
