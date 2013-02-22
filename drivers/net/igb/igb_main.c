@@ -4525,15 +4525,9 @@ void igb_update_stats(struct igb_adapter *adapter,
 		struct igb_ring *ring = adapter->rx_ring[i];
 
 		if (rqdpc) {
-<<<<<<< HEAD
-                  ring->rx_stats.drops += rqdpc;
-                  net_stats->rx_fifo_errors += rqdpc;
-                }
-=======
 			ring->rx_stats.drops += rqdpc;
 			net_stats->rx_fifo_errors += rqdpc;
 		}
->>>>>>> 322615c07968eaec10c7a3836f6fb200273c4611
 
 		do {
 			start = u64_stats_fetch_begin_bh(&ring->rx_syncp);
@@ -6879,3 +6873,4 @@ static void igb_vmm_control(struct igb_adapter *adapter)
 }
 
 /* igb_main.c */
+

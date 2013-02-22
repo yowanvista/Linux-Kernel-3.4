@@ -89,13 +89,8 @@ ENTRY(xen_iret)
 #ifdef CONFIG_SMP
 	GET_THREAD_INFO(%eax)
 	movl %ss:TI_cpu(%eax), %eax
-<<<<<<< HEAD
-        movl %ss:__per_cpu_offset(,%eax,4), %eax
-        mov %ss:xen_vcpu(%eax), %eax
-=======
 	movl %ss:__per_cpu_offset(,%eax,4), %eax
 	mov %ss:xen_vcpu(%eax), %eax
->>>>>>> 322615c07968eaec10c7a3836f6fb200273c4611
 #else
 	movl %ss:xen_vcpu, %eax
 #endif
@@ -232,4 +227,5 @@ ENTRY(xen_iret_crit_fixup)
 
 	lea 4(%edi), %esp		/* point esp to new frame */
 2:	jmp xen_do_upcall
+
 
