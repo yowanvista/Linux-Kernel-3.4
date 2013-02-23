@@ -1,0 +1,20 @@
+--- drivers/hid/usbhid/hid-core.c
++++ drivers/hid/usbhid/hid-core.c
+@@ -438,7 +448,7 @@
+ 	else
+ 		usbhid->outtail = (usbhid->outtail + 1) & (HID_OUTPUT_FIFO_SIZE - 1);
+ 
+-	if (usbhid->outhead != usbhid->outtail && !hid_submit_out(hid)) {
++	if (!irq_out_pump_restart(hid)) {
+ 		/* Successfully submitted next urb in queue */
+ 		spin_unlock_irqrestore(&usbhid->lock, flags);
+ 		return;
+@@ -495,7 +514,7 @@
+ 	else
+ 		usbhid->ctrltail = (usbhid->ctrltail + 1) & (HID_CONTROL_FIFO_SIZE - 1);
+ 
+-	if (usbhid->ctrlhead != usbhid->ctrltail && !hid_submit_ctrl(hid)) {
++	if (!ctrl_pump_restart(hid)) {
+ 		/* Successfully submitted next urb in queue */
+ 		spin_unlock(&usbhid->lock);
+ 		return;

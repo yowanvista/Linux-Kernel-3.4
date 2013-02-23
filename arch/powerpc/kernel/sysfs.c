@@ -214,6 +214,8 @@ static ssize_t __used store_dscr_default(struct sysdev_class *class,
 
 	on_each_cpu(update_dscr, NULL, 1);
 
+	on_each_cpu(update_dscr, NULL, 1);
+
 	return count;
 }
 

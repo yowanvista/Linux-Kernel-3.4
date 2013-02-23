@@ -1,0 +1,11 @@
+--- include/linux/snmp.h
++++ include/linux/snmp.h
+@@ -234,8 +235,6 @@
+ 	LINUX_MIB_TCPREQQFULLDROP,		/* TCPReqQFullDrop */
+ 	LINUX_MIB_TCPRETRANSFAIL,		/* TCPRetransFail */
+ 	LINUX_MIB_TCPRCVCOALESCE,			/* TCPRcvCoalesce */
+-	LINUX_MIB_TCPCHALLENGEACK,		/* TCPChallengeACK */
+-	LINUX_MIB_TCPSYNCHALLENGE,		/* TCPSYNChallenge */
+ 	__LINUX_MIB_MAX
+ };
+ 

@@ -1,0 +1,92 @@
+--- net/mac80211/rx.c
++++ net/mac80211/rx.c
+@@ -874,14 +879,16 @@
+ 		 */
+ 		if (rx->sta && rx->sdata->vif.type == NL80211_IFTYPE_STATION &&
+ 		    ieee80211_is_data_present(hdr->frame_control)) {
+-			u16 ethertype;
+-			u8 *payload;
+-
+-			payload = rx->skb->data +
+-				ieee80211_hdrlen(hdr->frame_control);
+-			ethertype = (payload[6] << 8) | payload[7];
+-			if (cpu_to_be16(ethertype) ==
+-			    rx->sdata->control_port_protocol)
++			unsigned int hdrlen;
++			__be16 ethertype;
++
++			hdrlen = ieee80211_hdrlen(hdr->frame_control);
++
++			if (rx->skb->len < hdrlen + 8)
++				return RX_DROP_MONITOR;
++
++			skb_copy_bits(rx->skb, hdrlen + 6, &ethertype, 2);
++			if (ethertype == rx->sdata->control_port_protocol)
+ 				return RX_CONTINUE;
+ 		}
+ 
+@@ -1470,11 +1477,14 @@
+ 
+ 	hdr = (struct ieee80211_hdr *)rx->skb->data;
+ 	fc = hdr->frame_control;
++
++	if (ieee80211_is_ctl(fc))
++		return RX_CONTINUE;
++
+ 	sc = le16_to_cpu(hdr->seq_ctrl);
+ 	frag = sc & IEEE80211_SCTL_FRAG;
+ 
+ 	if (likely((!ieee80211_has_morefrags(fc) && frag == 0) ||
+-		   (rx->skb)->len < 24 ||
+ 		   is_multicast_ether_addr(hdr->addr1))) {
+ 		/* not fragmented */
+ 		goto out;
+@@ -1967,9 +1995,6 @@
+ 	}
+ 	skb_set_queue_mapping(skb, q);
+ 
+-	if (!(status->rx_flags & IEEE80211_RX_RA_MATCH))
+-		goto out;
+-
+ 	if (!--mesh_hdr->ttl) {
+ 		IEEE80211_IFSTA_MESH_CTR_INC(ifmsh, dropped_frames_ttl);
+ 		return RX_DROP_MONITOR;
+@@ -2384,6 +2409,10 @@
+ 		}
+ 		break;
+ 	case WLAN_CATEGORY_SELF_PROTECTED:
++		if (len < (IEEE80211_MIN_ACTION_SIZE +
++			   sizeof(mgmt->u.action.u.self_prot.action_code)))
++			break;
++
+ 		switch (mgmt->u.action.u.self_prot.action_code) {
+ 		case WLAN_SP_MESH_PEERING_OPEN:
+ 		case WLAN_SP_MESH_PEERING_CLOSE:
+@@ -2486,7 +2519,7 @@
+ 	 * frames that we didn't handle, including returning unknown
+ 	 * ones. For all other modes we will return them to the sender,
+ 	 * setting the 0x80 bit in the action category, as required by
+-	 * 802.11-2007 7.3.1.11.
++	 * 802.11-2012 9.24.4.
+ 	 * Newer versions of hostapd shall also use the management frame
+ 	 * registration mechanisms, but older ones still use cooked
+ 	 * monitor interfaces so push all frames there.
+@@ -2954,10 +2990,15 @@
+ 		     test_bit(SCAN_SW_SCANNING, &local->scanning)))
+ 		status->rx_flags |= IEEE80211_RX_IN_SCAN;
+ 
+-	if (ieee80211_is_mgmt(fc))
+-		err = skb_linearize(skb);
+-	else
++	if (ieee80211_is_mgmt(fc)) {
++		/* drop frame if too short for header */
++		if (skb->len < ieee80211_hdrlen(fc))
++			err = -ENOBUFS;
++		else
++			err = skb_linearize(skb);
++	} else {
+ 		err = !pskb_may_pull(skb, ieee80211_hdrlen(fc));
++	}
+ 
+ 	if (err) {
+ 		dev_kfree_skb(skb);

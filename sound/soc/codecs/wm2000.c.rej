@@ -1,0 +1,11 @@
+--- sound/soc/codecs/wm2000.c
++++ sound/soc/codecs/wm2000.c
+@@ -692,7 +692,7 @@
+ #endif
+ 
+ static const struct regmap_config wm2000_regmap = {
+-	.reg_bits = 16,
++	.reg_bits = 8,
+ 	.val_bits = 8,
+ };
+ 

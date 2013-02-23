@@ -1,0 +1,10 @@
+--- arch/m32r/kernel/process.c
++++ arch/m32r/kernel/process.c
+@@ -92,6 +94,7 @@
+ 
+ 			idle();
+ 		}
++		rcu_idle_exit();
+ 		schedule_preempt_disabled();
+ 	}
+ }

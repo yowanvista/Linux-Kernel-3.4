@@ -3139,4 +3139,3 @@ MODULE_DESCRIPTION("Battery driver for Qualcomm MSM chipsets.");
 MODULE_VERSION("1.0");
 MODULE_ALIAS("platform:ancora_battery");
 
-

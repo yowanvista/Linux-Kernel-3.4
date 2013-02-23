@@ -1,0 +1,11 @@
+--- drivers/edac/i7300_edac.c
++++ drivers/edac/i7300_edac.c
+@@ -485,7 +485,7 @@
+ 		errnum = find_first_bit(&errors,
+ 					ARRAY_SIZE(ferr_nf_fbd_name));
+ 		specific = GET_ERR_FROM_TABLE(ferr_nf_fbd_name, errnum);
+-		branch = (GET_FBD_FAT_IDX(error_reg) == 2) ? 1 : 0;
++		branch = (GET_FBD_NF_IDX(error_reg) == 2) ? 1 : 0;
+ 
+ 		pci_read_config_dword(pvt->pci_dev_16_1_fsb_addr_map,
+ 			REDMEMA, &syndrome);

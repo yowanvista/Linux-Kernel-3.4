@@ -1,0 +1,12 @@
+--- net/sunrpc/sched.c
++++ net/sunrpc/sched.c
+@@ -932,7 +911,8 @@
+ 
+ static void rpc_release_resources_task(struct rpc_task *task)
+ {
+-	xprt_release(task);
++	if (task->tk_rqstp)
++		xprt_release(task);
+ 	if (task->tk_msg.rpc_cred) {
+ 		put_rpccred(task->tk_msg.rpc_cred);
+ 		task->tk_msg.rpc_cred = NULL;

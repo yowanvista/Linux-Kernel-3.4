@@ -1,0 +1,11 @@
+--- kernel/debug/kdb/kdb_io.c
++++ kernel/debug/kdb/kdb_io.c
+@@ -695,7 +700,7 @@
+ 		gdbstub_msg_write(kdb_buffer, retlen);
+ 	} else {
+ 		if (dbg_io_ops && !dbg_io_ops->is_console) {
+-			len = strlen(kdb_buffer);
++			len = retlen;
+ 			cp = kdb_buffer;
+ 			while (len--) {
+ 				dbg_io_ops->write_char(*cp);

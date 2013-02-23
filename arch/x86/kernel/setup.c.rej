@@ -1,0 +1,95 @@
+--- arch/x86/kernel/setup.c
++++ arch/x86/kernel/setup.c
+@@ -740,15 +662,15 @@
+ #ifdef CONFIG_EFI
+ 	if (!strncmp((char *)&boot_params.efi_info.efi_loader_signature,
+ 		     "EL32", 4)) {
+-		set_bit(EFI_BOOT, &x86_efi_facility);
++		efi_enabled = 1;
++		efi_64bit = false;
+ 	} else if (!strncmp((char *)&boot_params.efi_info.efi_loader_signature,
+ 		     "EL64", 4)) {
+-		set_bit(EFI_BOOT, &x86_efi_facility);
+-		set_bit(EFI_64BIT, &x86_efi_facility);
++		efi_enabled = 1;
++		efi_64bit = true;
+ 	}
+-
+-	if (efi_enabled(EFI_BOOT))
+-		efi_memblock_x86_reserve_range();
++	if (efi_enabled && efi_memblock_x86_reserve_range())
++		efi_enabled = 0;
+ #endif
+ 
+ 	x86_init.oem.arch_setup();
+@@ -821,7 +743,7 @@
+ 
+ 	finish_e820_parsing();
+ 
+-	if (efi_enabled(EFI_BOOT))
++	if (efi_enabled)
+ 		efi_init();
+ 
+ 	dmi_scan_machine();
+@@ -904,7 +826,7 @@
+ 	 * The EFI specification says that boot service code won't be called
+ 	 * after ExitBootServices(). This is, in fact, a lie.
+ 	 */
+-	if (efi_enabled(EFI_MEMMAP))
++	if (efi_enabled)
+ 		efi_reserve_boot_services();
+ 
+ 	/* preallocate 4k for mptable mpc */
+@@ -927,22 +847,8 @@
+ 
+ #ifdef CONFIG_X86_64
+ 	if (max_pfn > max_low_pfn) {
+-		int i;
+-		unsigned long start, end;
+-		unsigned long start_pfn, end_pfn;
+-
+-		for_each_mem_pfn_range(i, MAX_NUMNODES, &start_pfn, &end_pfn,
+-							 NULL) {
+-
+-			end = PFN_PHYS(end_pfn);
+-			if (end <= (1UL<<32))
+-				continue;
+-
+-			start = PFN_PHYS(start_pfn);
+-			max_pfn_mapped = init_memory_mapping(
+-						max((1UL<<32), start), end);
+-		}
+-
++		max_pfn_mapped = init_memory_mapping(1UL<<32,
++						     max_pfn<<PAGE_SHIFT);
+ 		/* can we preseve max_low_pfn ?*/
+ 		max_low_pfn = max_pfn;
+ 	}
+@@ -1039,7 +945,7 @@
+ 
+ #ifdef CONFIG_VT
+ #if defined(CONFIG_VGA_CONSOLE)
+-	if (!efi_enabled(EFI_BOOT) || (efi_mem_type(0xa0000) != EFI_CONVENTIONAL_MEMORY))
++	if (!efi_enabled || (efi_mem_type(0xa0000) != EFI_CONVENTIONAL_MEMORY))
+ 		conswitchp = &vga_con;
+ #elif defined(CONFIG_DUMMY_CONSOLE)
+ 	conswitchp = &dummy_con;
+@@ -1054,18 +960,6 @@
+ 	mcheck_init();
+ 
+ 	arch_init_ideal_nops();
+-
+-#ifdef CONFIG_EFI
+-	/* Once setup is done above, unmap the EFI memory map on
+-	 * mismatched firmware/kernel archtectures since there is no
+-	 * support for runtime services.
+-	 */
+-	if (efi_enabled(EFI_BOOT) &&
+-	    IS_ENABLED(CONFIG_X86_64) != efi_enabled(EFI_64BIT)) {
+-		pr_info("efi: Setup done, disabling due to 32/64-bit mismatch\n");
+-		efi_unmap_memmap();
+-	}
+-#endif
+ }
+ 
+ #ifdef CONFIG_X86_32

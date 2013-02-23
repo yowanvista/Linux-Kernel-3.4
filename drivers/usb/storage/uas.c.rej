@@ -1,0 +1,62 @@
+--- drivers/usb/storage/uas.c
++++ drivers/usb/storage/uas.c
+@@ -132,13 +136,15 @@
+ 	}
+ 
+ 	cmnd->result = sense_iu->status;
+-	cmnd->scsi_done(cmnd);
++	if (!(cmdinfo->state & DATA_COMPLETES_CMD))
++		cmnd->scsi_done(cmnd);
+ }
+ 
+ static void uas_sense_old(struct urb *urb, struct scsi_cmnd *cmnd)
+ {
+ 	struct sense_iu_old *sense_iu = urb->transfer_buffer;
+ 	struct scsi_device *sdev = cmnd->device;
++	struct uas_cmd_info *cmdinfo = (void *)&cmnd->SCp;
+ 
+ 	if (urb->actual_length > 8) {
+ 		unsigned len = be16_to_cpup(&sense_iu->len) - 2;
+@@ -156,7 +162,8 @@
+ 	}
+ 
+ 	cmnd->result = sense_iu->status;
+-	cmnd->scsi_done(cmnd);
++	if (!(cmdinfo->state & DATA_COMPLETES_CMD))
++		cmnd->scsi_done(cmnd);
+ }
+ 
+ static void uas_xfer_data(struct urb *urb, struct scsi_cmnd *cmnd,
+@@ -207,12 +215,32 @@
+ 			dev_err(&urb->dev->dev, "failed submit status urb\n");
+ 		return;
+ 	}
++	cmdinfo = (void *)&cmnd->SCp;
+ 
+ 	switch (iu->iu_id) {
+ 	case IU_ID_STATUS:
+ 		if (devinfo->cmnd == cmnd)
+ 			devinfo->cmnd = NULL;
+ 
++		if (!(cmdinfo->state & COMPLETED_DATA_IN) &&
++				cmdinfo->data_in_urb) {
++		       if (devinfo->use_streams) {
++			       cmdinfo->state |= DATA_COMPLETES_CMD;
++			       usb_unlink_urb(cmdinfo->data_in_urb);
++		       } else {
++			       usb_free_urb(cmdinfo->data_in_urb);
++		       }
++		}
++		if (!(cmdinfo->state & COMPLETED_DATA_OUT) &&
++				cmdinfo->data_out_urb) {
++			if (devinfo->use_streams) {
++				cmdinfo->state |= DATA_COMPLETES_CMD;
++				usb_unlink_urb(cmdinfo->data_in_urb);
++			} else {
++				usb_free_urb(cmdinfo->data_out_urb);
++			}
++		}
++
+ 		if (urb->actual_length < 16)
+ 			devinfo->uas_sense_old = 1;
+ 		if (devinfo->uas_sense_old)

@@ -6873,4 +6873,3 @@ static void igb_vmm_control(struct igb_adapter *adapter)
 }
 
 /* igb_main.c */
-

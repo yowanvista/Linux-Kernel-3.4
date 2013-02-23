@@ -1,0 +1,10 @@
+--- arch/cris/kernel/process.c
++++ arch/cris/kernel/process.c
+@@ -116,6 +118,7 @@
+ 				idle = default_idle;
+ 			idle();
+ 		}
++		rcu_idle_exit();
+ 		schedule_preempt_disabled();
+ 	}
+ }

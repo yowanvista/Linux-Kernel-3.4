@@ -1,0 +1,11 @@
+--- net/bluetooth/l2cap_sock.c
++++ net/bluetooth/l2cap_sock.c
+@@ -587,7 +586,7 @@
+ 				break;
+ 			}
+ 
+-			if (smp_conn_security(conn->hcon, sec.level))
++			if (smp_conn_security(conn, sec.level))
+ 				break;
+ 			sk->sk_state = BT_CONFIG;
+ 			chan->state = BT_CONFIG;

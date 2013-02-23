@@ -1,0 +1,11 @@
+--- drivers/block/xen-blkback/blkback.c
++++ drivers/block/xen-blkback/blkback.c
+@@ -337,7 +337,7 @@
+ 		invcount++;
+ 	}
+ 
+-	ret = gnttab_unmap_refs(unmap, pages, invcount, false);
++	ret = gnttab_unmap_refs(unmap, NULL, pages, invcount);
+ 	BUG_ON(ret);
+ }
+ 

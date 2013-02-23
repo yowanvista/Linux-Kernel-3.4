@@ -1,0 +1,108 @@
+--- net/mac80211/mlme.c
++++ net/mac80211/mlme.c
+@@ -254,6 +254,7 @@
+ 		 */
+ 		ieee80211_stop_queues_by_reason(&sdata->local->hw,
+ 				IEEE80211_QUEUE_STOP_REASON_CHTYPE_CHANGE);
++		queues_stopped = true;
+ 
+ 		/* flush out all packets */
+ 		synchronize_net();
+@@ -272,12 +273,12 @@
+ 						 IEEE80211_RC_HT_CHANGED,
+ 						 tx_channel_type);
+ 		rcu_read_unlock();
+-
+-		if (beacon_htcap_ie)
+-			ieee80211_wake_queues_by_reason(&sdata->local->hw,
+-				IEEE80211_QUEUE_STOP_REASON_CHTYPE_CHANGE);
+ 	}
+ 
++	if (queues_stopped)
++		ieee80211_wake_queues_by_reason(&sdata->local->hw,
++			IEEE80211_QUEUE_STOP_REASON_CHTYPE_CHANGE);
++
+ 	ht_opmode = le16_to_cpu(hti->operation_mode);
+ 
+ 	/* if bss configuration changed store the new one */
+@@ -1375,7 +1376,6 @@
+ 	struct ieee80211_local *local = sdata->local;
+ 	struct sta_info *sta;
+ 	u32 changed = 0;
+-	u8 bssid[ETH_ALEN];
+ 
+ 	ASSERT_MGD_MTX(ifmgd);
+ 
+@@ -1414,13 +1411,16 @@
+ 
+ 	/* deauthenticate/disassociate now */
+ 	if (tx || frame_buf)
+-		ieee80211_send_deauth_disassoc(sdata, bssid, stype, reason,
+-					       tx, frame_buf);
++		ieee80211_send_deauth_disassoc(sdata, ifmgd->bssid, stype,
++					       reason, tx, frame_buf);
+ 
+ 	/* flush out frame */
+ 	if (tx)
+ 		drv_flush(local, false);
+ 
++	/* clear bssid only after building the needed mgmt frames */
++	memset(ifmgd->bssid, 0, ETH_ALEN);
++
+ 	/* remove AP and TDLS peers */
+ 	sta_info_flush(local, sdata);
+ 
+@@ -1810,7 +1810,8 @@
+ 	if (status_code != WLAN_STATUS_SUCCESS) {
+ 		printk(KERN_DEBUG "%s: %pM denied authentication (status %d)\n",
+ 		       sdata->name, mgmt->sa, status_code);
+-		goto out;
++		ieee80211_destroy_auth_data(sdata, false);
++		return RX_MGMT_CFG80211_RX_AUTH;
+ 	}
+ 
+ 	switch (ifmgd->auth_data->algorithm) {
+@@ -1832,7 +1833,6 @@
+ 	}
+ 
+ 	printk(KERN_DEBUG "%s: authenticated\n", sdata->name);
+- out:
+ 	ifmgd->auth_data->done = true;
+ 	ifmgd->auth_data->timeout = jiffies + IEEE80211_AUTH_WAIT_ASSOC;
+ 	run_again(ifmgd, ifmgd->auth_data->timeout);
+@@ -2180,15 +2180,13 @@
+ 		       sdata->name, mgmt->sa, status_code);
+ 		ieee80211_destroy_assoc_data(sdata, false);
+ 	} else {
+-		printk(KERN_DEBUG "%s: associated\n", sdata->name);
+-
+ 		if (!ieee80211_assoc_success(sdata, *bss, mgmt, len)) {
+ 			/* oops -- internal error -- send timeout for now */
+-			ieee80211_destroy_assoc_data(sdata, true);
+-			sta_info_destroy_addr(sdata, mgmt->bssid);
++			ieee80211_destroy_assoc_data(sdata, false);
+ 			cfg80211_put_bss(*bss);
+ 			return RX_MGMT_CFG80211_ASSOC_TIMEOUT;
+ 		}
++		printk(KERN_DEBUG "%s: associated\n", sdata->name);
+ 
+ 		/*
+ 		 * destroy assoc_data afterwards, as otherwise an idle
+@@ -3231,6 +3229,8 @@
+ 	goto out_unlock;
+ 
+  err_clear:
++	memset(ifmgd->bssid, 0, ETH_ALEN);
++	ieee80211_bss_info_change_notify(sdata, BSS_CHANGED_BSSID);
+ 	ifmgd->auth_data = NULL;
+  err_free:
+ 	kfree(auth_data);
+@@ -3409,6 +3409,8 @@
+ 	err = 0;
+ 	goto out;
+  err_clear:
++	memset(ifmgd->bssid, 0, ETH_ALEN);
++	ieee80211_bss_info_change_notify(sdata, BSS_CHANGED_BSSID);
+ 	ifmgd->assoc_data = NULL;
+  err_free:
+ 	kfree(assoc_data);

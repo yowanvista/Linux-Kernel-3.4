@@ -1,0 +1,51 @@
+--- sound/pci/hda/patch_cirrus.c
++++ sound/pci/hda/patch_cirrus.c
+@@ -1085,14 +1086,18 @@
+ 			cs_automic(codec);
+ 
+ 		coef = 0x000a; /* ADC1/2 - Digital and Analog Soft Ramp */
++		cs_vendor_coef_set(codec, IDX_ADC_CFG, coef);
++
++		coef = cs_vendor_coef_get(codec, IDX_BEEP_CFG);
+ 		if (is_active_pin(codec, CS_DMIC2_PIN_NID))
+-			coef |= 0x0500; /* DMIC2 2 chan on, GPIO1 off */
++			coef |= 1 << 4; /* DMIC2 2 chan on, GPIO1 off */
+ 		if (is_active_pin(codec, CS_DMIC1_PIN_NID))
+-			coef |= 0x1800; /* DMIC1 2 chan on, GPIO0 off
++			coef |= 1 << 3; /* DMIC1 2 chan on, GPIO0 off
+ 					 * No effect if SPDIF_OUT2 is
+ 					 * selected in IDX_SPDIF_CTL.
+ 					*/
+-		cs_vendor_coef_set(codec, IDX_ADC_CFG, coef);
++
++		cs_vendor_coef_set(codec, IDX_BEEP_CFG, coef);
+ 	} else {
+ 		if (spec->mic_detect)
+ 			cs_automic(codec);
+@@ -1113,7 +1118,7 @@
+ 	  | 0x0400 /* Disable Coefficient Auto increment */
+ 	  )},
+ 	/* Beep */
+-	{0x11, AC_VERB_SET_COEF_INDEX, IDX_DAC_CFG},
++	{0x11, AC_VERB_SET_COEF_INDEX, IDX_BEEP_CFG},
+ 	{0x11, AC_VERB_SET_PROC_COEF, 0x0007}, /* Enable Beep thru DAC1/2/3 */
+ 
+ 	{} /* terminator */
+@@ -1985,7 +1990,7 @@
+ 	return 0;
+ 
+  error:
+-	kfree(codec->spec);
++	cs_free(codec);
+ 	codec->spec = NULL;
+ 	return err;
+ }
+@@ -2010,7 +2015,7 @@
+ 	return 0;
+ 
+  error:
+-	kfree(codec->spec);
++	cs_free(codec);
+ 	codec->spec = NULL;
+ 	return err;
+ }

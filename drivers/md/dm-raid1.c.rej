@@ -1,0 +1,11 @@
+--- drivers/md/dm-raid1.c
++++ drivers/md/dm-raid1.c
+@@ -1215,7 +1216,7 @@
+ 	 * We need to dec pending if this was a write.
+ 	 */
+ 	if (rw == WRITE) {
+-		if (!(bio->bi_rw & REQ_FLUSH))
++		if (!(bio->bi_rw & (REQ_FLUSH | REQ_DISCARD)))
+ 			dm_rh_dec(ms->rh, map_context->ll);
+ 		return error;
+ 	}

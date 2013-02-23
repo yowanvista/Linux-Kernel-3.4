@@ -1,0 +1,104 @@
+--- net/ipv4/tcp_input.c
++++ net/ipv4/tcp_input.c
+@@ -3037,14 +3034,13 @@
+  * tcp_xmit_retransmit_queue().
+  */
+ static void tcp_fastretrans_alert(struct sock *sk, int pkts_acked,
+-				  int prior_sacked, bool is_dupack,
++				  int newly_acked_sacked, bool is_dupack,
+ 				  int flag)
+ {
+ 	struct inet_connection_sock *icsk = inet_csk(sk);
+ 	struct tcp_sock *tp = tcp_sk(sk);
+ 	int do_lost = is_dupack || ((flag & FLAG_DATA_SACKED) &&
+ 				    (tcp_fackets_out(tp) > tp->reordering));
+-	int newly_acked_sacked = 0;
+ 	int fast_rexmit = 0, mib_idx;
+ 
+ 	if (WARN_ON(!tp->packets_out && tp->sacked_out))
+@@ -3104,7 +3100,6 @@
+ 				tcp_add_reno_sack(sk);
+ 		} else
+ 			do_lost = tcp_try_undo_partial(sk, pkts_acked);
+-		newly_acked_sacked = pkts_acked + tp->sacked_out - prior_sacked;
+ 		break;
+ 	case TCP_CA_Loss:
+ 		if (flag & FLAG_DATA_ACKED)
+@@ -3126,7 +3121,6 @@
+ 			if (is_dupack)
+ 				tcp_add_reno_sack(sk);
+ 		}
+-		newly_acked_sacked = pkts_acked + tp->sacked_out - prior_sacked;
+ 
+ 		if (icsk->icsk_ca_state <= TCP_CA_Disorder)
+ 			tcp_try_undo_dsack(sk);
+@@ -3698,19 +3669,14 @@
+ 	int prior_packets;
+ 	int prior_sacked = tp->sacked_out;
+ 	int pkts_acked = 0;
++	int newly_acked_sacked = 0;
+ 	int frto_cwnd = 0;
+ 
+ 	/* If the ack is older than previous acks
+ 	 * then we can probably ignore it.
+ 	 */
+-	if (before(ack, prior_snd_una)) {
+-		/* RFC 5961 5.2 [Blind Data Injection Attack].[Mitigation] */
+-		if (before(ack, prior_snd_una - tp->max_window)) {
+-			tcp_send_challenge_ack(sk);
+-			return -1;
+-		}
++	if (before(ack, prior_snd_una))
+ 		goto old_ack;
+-	}
+ 
+ 	/* If the ack includes data we haven't sent yet, discard
+ 	 * this segment (RFC793 Section 3.9).
+@@ -3776,6 +3742,8 @@
+ 	flag |= tcp_clean_rtx_queue(sk, prior_fackets, prior_snd_una);
+ 
+ 	pkts_acked = prior_packets - tp->packets_out;
++	newly_acked_sacked = (prior_packets - prior_sacked) -
++			     (tp->packets_out - tp->sacked_out);
+ 
+ 	if (tp->frto_counter)
+ 		frto_cwnd = tcp_process_frto(sk, flag);
+@@ -3789,7 +3757,7 @@
+ 		    tcp_may_raise_cwnd(sk, flag))
+ 			tcp_cong_avoid(sk, ack, prior_in_flight);
+ 		is_dupack = !(flag & (FLAG_SND_UNA_ADVANCED | FLAG_NOT_DUP));
+-		tcp_fastretrans_alert(sk, pkts_acked, prior_sacked,
++		tcp_fastretrans_alert(sk, pkts_acked, newly_acked_sacked,
+ 				      is_dupack, flag);
+ 	} else {
+ 		if ((flag & FLAG_DATA_ACKED) && !frto_cwnd)
+@@ -3804,7 +3772,7 @@
+ no_queue:
+ 	/* If data was DSACKed, see if we can undo a cwnd reduction. */
+ 	if (flag & FLAG_DSACKING_ACK)
+-		tcp_fastretrans_alert(sk, pkts_acked, prior_sacked,
++		tcp_fastretrans_alert(sk, pkts_acked, newly_acked_sacked,
+ 				      is_dupack, flag);
+ 	/* If this ack opens up a zero window, clear backoff.  It was
+ 	 * being used to time the probes, and is probably far higher than
+@@ -3824,7 +3792,8 @@
+ 	 */
+ 	if (TCP_SKB_CB(skb)->sacked) {
+ 		flag |= tcp_sacktag_write_queue(sk, skb, prior_snd_una);
+-		tcp_fastretrans_alert(sk, pkts_acked, prior_sacked,
++		newly_acked_sacked = tp->sacked_out - prior_sacked;
++		tcp_fastretrans_alert(sk, pkts_acked, newly_acked_sacked,
+ 				      is_dupack, flag);
+ 	}
+ 
+@@ -5274,8 +5243,8 @@
+ /* Does PAWS and seqno based validation of an incoming segment, flags will
+  * play significant role here.
+  */
+-static bool tcp_validate_incoming(struct sock *sk, struct sk_buff *skb,
+-				  const struct tcphdr *th, int syn_inerr)
++static int tcp_validate_incoming(struct sock *sk, struct sk_buff *skb,
++			      const struct tcphdr *th, int syn_inerr)
+ {
+ 	const u8 *hash_location;
+ 	struct tcp_sock *tp = tcp_sk(sk);

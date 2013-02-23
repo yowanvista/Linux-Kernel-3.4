@@ -1,0 +1,40 @@
+--- fs/nfs/callback.c
++++ fs/nfs/callback.c
+@@ -253,7 +253,6 @@
+ 	char svc_name[12];
+ 	int ret = 0;
+ 	int minorversion_setup;
+-	struct net *net = &init_net;
+ 
+ 	mutex_lock(&nfs_callback_mutex);
+ 	if (cb_info->users++ || cb_info->task != NULL) {
+@@ -266,12 +265,6 @@
+ 		goto out_err;
+ 	}
+ 
+-	ret = svc_bind(serv, net);
+-	if (ret < 0) {
+-		printk(KERN_WARNING "NFS: bind callback service failed\n");
+-		goto out_err;
+-	}
+-
+ 	minorversion_setup =  nfs_minorversion_callback_svc_setup(minorversion,
+ 					serv, xprt, &rqstp, &callback_svc);
+ 	if (!minorversion_setup) {
+@@ -313,8 +306,6 @@
+ 	dprintk("NFS: Couldn't create callback socket or server thread; "
+ 		"err = %d\n", ret);
+ 	cb_info->users--;
+-	if (serv)
+-		svc_shutdown_net(serv, net);
+ 	goto out;
+ }
+ 
+@@ -329,7 +320,6 @@
+ 	cb_info->users--;
+ 	if (cb_info->users == 0 && cb_info->task != NULL) {
+ 		kthread_stop(cb_info->task);
+-		svc_shutdown_net(cb_info->serv, &init_net);
+ 		svc_exit_thread(cb_info->rqst);
+ 		cb_info->serv = NULL;
+ 		cb_info->rqst = NULL;

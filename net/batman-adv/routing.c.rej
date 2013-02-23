@@ -1,0 +1,11 @@
+--- net/batman-adv/routing.c
++++ net/batman-adv/routing.c
+@@ -618,6 +618,8 @@
+ 			 * changes */
+ 			if (skb_linearize(skb) < 0)
+ 				goto out;
++			/* skb_linearize() possibly changed skb->data */
++			tt_query = (struct tt_query_packet *)skb->data;
+ 
+ 			tt_len = tt_query->tt_data * sizeof(struct tt_change);
+ 

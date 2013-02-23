@@ -1138,7 +1138,7 @@ static int msm_batt_check_recharging(void)
 static int msm_batt_check_level(int battery_level)
 {
 	if (msm_batt_info.batt_full_check == 0 && battery_level == 100)
-		battery_level = 100;	// fully charged
+		battery_level = 99;	// not yet fully charged
 
 	if (msm_batt_info.batt_capacity != battery_level)
 	{
@@ -2766,5 +2766,4 @@ MODULE_AUTHOR("Kiran Kandi, Qualcomm Innovation Center, Inc.");
 MODULE_DESCRIPTION("Battery driver for Qualcomm MSM chipsets.");
 MODULE_VERSION("1.0");
 MODULE_ALIAS("platform:ariesve_battery");
-
 

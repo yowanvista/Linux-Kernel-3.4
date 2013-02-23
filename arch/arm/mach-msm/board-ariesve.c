@@ -143,7 +143,18 @@ EXPORT_SYMBOL(sec_class);
 struct device *switch_dev;
 EXPORT_SYMBOL(switch_dev);
 
-#define MSM_PMEM_SF_SIZE	0x600000
+#ifdef CONFIG_MSM_MORE_MEMORY // 351 MB of free RAM
+#define MSM_PMEM_SF_SIZE          0x1800000 // 25.165.824 Bytes =  24 MB
+#define MSM_PMEM_ADSP_SIZE        0x2A05000 // 44.060.672 Bytes =  42 MB
+#else                         // 347 MB of free RAM
+#define MSM_PMEM_SF_SIZE          0x1A00000 // 27.262.976 Bytes =  26 MB
+#define MSM_PMEM_ADSP_SIZE        0x2D00000 // 47.185.920 Bytes =  45 MB
+#endif
+
+#define MSM_FLUID_PMEM_ADSP_SIZE  0x2800000 // 41.943.040 Bytes =  40 MB
+#define PMEM_KERNEL_EBI0_SIZE     0x600000  //  6.291.456 Bytes =   6 MB
+#define MSM_PMEM_AUDIO_SIZE       0x200000  //  2.097.152 Bytes =   2 MB
+
 #ifdef CONFIG_FB_MSM_TRIPLE_BUFFER
 #define MSM_FB_PRIM_BUF_SIZE	(800 * 480 * 4 * 3) /* 4bpp * 3 Pages */
 #else
@@ -158,11 +169,6 @@ EXPORT_SYMBOL(switch_dev);
 #endif
 
 #define MSM_FB_SIZE roundup(MSM_FB_PRIM_BUF_SIZE, 4096)
-
-#define MSM_PMEM_ADSP_SIZE		0x2C00000
-#define MSM_FLUID_PMEM_ADSP_SIZE	0x2800000
-#define PMEM_KERNEL_EBI0_SIZE		0x600000
-#define MSM_PMEM_AUDIO_SIZE		0x000000
 
 #ifdef CONFIG_ION_MSM
 static struct platform_device ion_dev;
@@ -7542,4 +7548,3 @@ MACHINE_START(ARIESVE, "GT-I9001 Board")
 	.handle_irq = vic_handle_irq,
 	.fixup = msm7x30_fixup,
 MACHINE_END
-

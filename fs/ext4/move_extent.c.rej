@@ -1,0 +1,30 @@
+--- fs/ext4/move_extent.c
++++ fs/ext4/move_extent.c
+@@ -1142,18 +1076,21 @@
+ 			orig_inode->i_ino, donor_inode->i_ino);
+ 		return -EINVAL;
+ 	}
+-
++	/* TODO: This is non obvious task to swap blocks for inodes with full
++	   jornaling enabled */
++	if (ext4_should_journal_data(orig_inode) ||
++	    ext4_should_journal_data(donor_inode)) {
++		return -EINVAL;
++	}
+ 	/* Protect orig and donor inodes against a truncate */
+-	ret1 = mext_inode_double_lock(orig_inode, donor_inode);
+-	if (ret1 < 0)
+-		return ret1;
++	mext_inode_double_lock(orig_inode, donor_inode);
+ 
+ 	/* Protect extent tree against block allocations via delalloc */
+ 	double_down_write_data_sem(orig_inode, donor_inode);
+ 	/* Check the filesystem environment whether move_extent can be done */
+-	ret1 = mext_check_arguments(orig_inode, donor_inode, orig_start,
++	ret = mext_check_arguments(orig_inode, donor_inode, orig_start,
+ 				    donor_start, &len);
+-	if (ret1)
++	if (ret)
+ 		goto out;
+ 
+ 	file_end = (i_size_read(orig_inode) - 1) >> orig_inode->i_blkbits;

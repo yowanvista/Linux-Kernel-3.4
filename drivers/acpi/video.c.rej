@@ -1,0 +1,43 @@
+--- drivers/acpi/video.c
++++ drivers/acpi/video.c
+@@ -1359,12 +1375,15 @@
+ acpi_video_bus_get_devices(struct acpi_video_bus *video,
+ 			   struct acpi_device *device)
+ {
+-	int status;
++	int status = 0;
+ 	struct acpi_device *dev;
+ 
+-	status = acpi_video_device_enumerate(video);
+-	if (status)
+-		return status;
++	/*
++	 * There are systems where video module known to work fine regardless
++	 * of broken _DOD and ignoring returned value here doesn't cause
++	 * any issues later.
++	 */
++	acpi_video_device_enumerate(video);
+ 
+ 	list_for_each_entry(dev, &device->children, node) {
+ 
+@@ -1761,6 +1780,7 @@
+ 
+ static int __init intel_opregion_present(void)
+ {
++	int i915 = 0;
+ #if defined(CONFIG_DRM_I915) || defined(CONFIG_DRM_I915_MODULE)
+ 	struct pci_dev *dev = NULL;
+ 	u32 address;
+@@ -1773,10 +1793,10 @@
+ 		pci_read_config_dword(dev, 0xfc, &address);
+ 		if (!address)
+ 			continue;
+-		return 1;
++		i915 = 1;
+ 	}
+ #endif
+-	return 0;
++	return i915;
+ }
+ 
+ int acpi_video_register(void)

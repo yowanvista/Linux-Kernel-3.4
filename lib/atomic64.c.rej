@@ -1,0 +1,17 @@
+--- lib/atomic64.c
++++ lib/atomic64.c
+@@ -177,14 +181,3 @@
+ 	return ret;
+ }
+ EXPORT_SYMBOL(atomic64_add_unless);
+-
+-static int init_atomic64_lock(void)
+-{
+-	int i;
+-
+-	for (i = 0; i < NR_LOCKS; ++i)
+-		raw_spin_lock_init(&atomic64_lock[i].lock);
+-	return 0;
+-}
+-
+-pure_initcall(init_atomic64_lock);

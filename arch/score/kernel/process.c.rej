@@ -1,0 +1,14 @@
+--- arch/score/kernel/process.c
++++ arch/score/kernel/process.c
+@@ -51,9 +52,10 @@
+ {
+ 	/* endless idle loop with no priority at all */
+ 	while (1) {
++		rcu_idle_enter();
+ 		while (!need_resched())
+ 			barrier();
+-
++		rcu_idle_exit();
+ 		schedule_preempt_disabled();
+ 	}
+ }

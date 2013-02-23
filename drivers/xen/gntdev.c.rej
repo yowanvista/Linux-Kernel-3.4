@@ -1,0 +1,28 @@
+--- drivers/xen/gntdev.c
++++ drivers/xen/gntdev.c
+@@ -157,12 +172,7 @@
+ 	return add;
+ 
+ err:
+-	kfree(add->pages);
+-	kfree(add->grants);
+-	kfree(add->map_ops);
+-	kfree(add->unmap_ops);
+-	kfree(add->kmap_ops);
+-	kfree(add);
++	gntdev_free_map(add);
+ 	return NULL;
+ }
+ 
+@@ -321,8 +323,9 @@
+ 		}
+ 	}
+ 
+-	err = gnttab_unmap_refs(map->unmap_ops + offset, map->pages + offset,
+-				pages, true);
++	err = gnttab_unmap_refs(map->unmap_ops + offset,
++			use_ptemod ? map->kmap_ops + offset : NULL, map->pages + offset,
++			pages);
+ 	if (err)
+ 		return err;
+ 

@@ -1,0 +1,14 @@
+--- drivers/dma/imx-dma.c
++++ drivers/dma/imx-dma.c
+@@ -473,8 +473,10 @@
+ 			slot = i;
+ 			break;
+ 		}
+-		if (slot < 0)
++		if (slot < 0) {
++			spin_unlock_irqrestore(&imxdma->lock, flags);
+ 			return -EBUSY;
++		}
+ 
+ 		imxdma->slots_2d[slot].xsr = d->x;
+ 		imxdma->slots_2d[slot].ysr = d->y;

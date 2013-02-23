@@ -1,0 +1,23 @@
+--- drivers/net/bonding/bond_main.c
++++ drivers/net/bonding/bond_main.c
+@@ -3217,12 +3209,6 @@
+ 	switch (event) {
+ 	case NETDEV_CHANGENAME:
+ 		return bond_event_changename(event_bond);
+-	case NETDEV_UNREGISTER:
+-		bond_remove_proc_entry(event_bond);
+-		break;
+-	case NETDEV_REGISTER:
+-		bond_create_proc_entry(event_bond);
+-		break;
+ 	default:
+ 		break;
+ 	}
+@@ -4810,6 +4798,7 @@
+ 
+ 	bond_set_lockdep_class(bond_dev);
+ 
++	bond_create_proc_entry(bond);
+ 	list_add_tail(&bond->bond_list, &bn->dev_list);
+ 
+ 	bond_prepare_sysfs_group(bond);

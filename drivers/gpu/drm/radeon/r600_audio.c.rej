@@ -1,0 +1,13 @@
+--- drivers/gpu/drm/radeon/r600_audio.c
++++ drivers/gpu/drm/radeon/r600_audio.c
+@@ -265,8 +266,8 @@
+ 		WREG32(EVERGREEN_AUDIO_PLL1_DIV, clock * 10);
+ 		WREG32(EVERGREEN_AUDIO_PLL1_UNK, 0x00000071);
+ 
+-		/* Some magic trigger or src sel? */
+-		WREG32_P(0x5ac, 0x01, ~0x77);
++		/* Select DTO source */
++		WREG32(0x5ac, radeon_crtc->crtc_id);
+ 	} else {
+ 		switch (dig->dig_encoder) {
+ 		case 0:

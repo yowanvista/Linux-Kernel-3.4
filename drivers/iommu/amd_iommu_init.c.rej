@@ -1,0 +1,43 @@
+--- drivers/iommu/amd_iommu_init.c
++++ drivers/iommu/amd_iommu_init.c
+@@ -1360,20 +1397,16 @@
+ {
+ 	int i, j;
+ 	u32 ioc_feature_control;
+-	struct pci_dev *pdev = NULL;
++	struct pci_dev *pdev = iommu->root_pdev;
+ 
+ 	/* RD890 BIOSes may not have completely reconfigured the iommu */
+-	if (!is_rd890_iommu(iommu->dev))
++	if (!is_rd890_iommu(iommu->dev) || !pdev)
+ 		return;
+ 
+ 	/*
+ 	 * First, we need to ensure that the iommu is enabled. This is
+ 	 * controlled by a register in the northbridge
+ 	 */
+-	pdev = pci_get_bus_and_slot(iommu->dev->bus->number, PCI_DEVFN(0, 0));
+-
+-	if (!pdev)
+-		return;
+ 
+ 	/* Select Northbridge indirect register 0x75 and enable writing */
+ 	pci_write_config_dword(pdev, 0x60, 0x75 | (1 << 7));
+@@ -1383,8 +1416,6 @@
+ 	if (!(ioc_feature_control & 0x1))
+ 		pci_write_config_dword(pdev, 0x64, ioc_feature_control | 1);
+ 
+-	pci_dev_put(pdev);
+-
+ 	/* Restore the iommu BAR */
+ 	pci_write_config_dword(iommu->dev, iommu->cap_ptr + 4,
+ 			       iommu->stored_addr_lo);
+@@ -1691,8 +1724,6 @@
+ 	else
+ 		printk(KERN_INFO "AMD-Vi: Lazy IO/TLB flushing enabled\n");
+ 
+-	x86_platform.iommu_shutdown = disable_iommus;
+-
+ out:
+ 	return ret;
+ 

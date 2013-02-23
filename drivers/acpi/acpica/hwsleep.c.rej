@@ -1,0 +1,19 @@
+--- drivers/acpi/acpica/hwsleep.c
++++ drivers/acpi/acpica/hwsleep.c
+@@ -364,6 +376,16 @@
+ 				    [ACPI_EVENT_POWER_BUTTON].
+ 				    status_register_id, ACPI_CLEAR_STATUS);
+ 
++	/*
++	 * Enable BM arbitration. This feature is contained within an
++	 * optional register (PM2 Control), so ignore a BAD_ADDRESS
++	 * exception.
++	 */
++	status = acpi_write_bit_register(ACPI_BITREG_ARB_DISABLE, 0);
++	if (ACPI_FAILURE(status) && (status != AE_BAD_ADDRESS)) {
++		return_ACPI_STATUS(status);
++	}
++
+ 	acpi_hw_execute_sleep_method(METHOD_PATHNAME__SST, ACPI_SST_WORKING);
+ 	return_ACPI_STATUS(status);
+ }

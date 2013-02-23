@@ -1,0 +1,10 @@
+--- drivers/pci/hotplug/pciehp.h
++++ drivers/pci/hotplug/pciehp.h
+@@ -44,7 +44,6 @@
+ extern int pciehp_poll_time;
+ extern bool pciehp_debug;
+ extern bool pciehp_force;
+-extern struct workqueue_struct *pciehp_wq;
+ 
+ #define dbg(format, arg...)						\
+ do {									\

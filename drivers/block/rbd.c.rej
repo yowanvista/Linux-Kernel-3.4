@@ -1,0 +1,385 @@
+--- drivers/block/rbd.c
++++ drivers/block/rbd.c
+@@ -174,10 +174,13 @@
+ 
+ 	/* protects updating the header */
+ 	struct rw_semaphore     header_rwsem;
++	/* name of the snapshot this device reads from */
+ 	char                    snap_name[RBD_MAX_SNAP_NAME_LEN];
+-	u32 cur_snap;	/* index+1 of current snapshot within snap context
+-			   0 - for the head */
+-	int read_only;
++	/* id of the snapshot this device reads from */
++	u64                     snap_id;	/* current snapshot id */
++	/* whether the snap_id this device reads from still exists */
++	bool                    snap_exists;
++	bool			read_only;
+ 
+ 	struct list_head	node;
+ 
+@@ -199,10 +203,6 @@
+ 
+ static int __rbd_init_snaps_header(struct rbd_device *rbd_dev);
+ static void rbd_dev_release(struct device *dev);
+-static ssize_t rbd_snap_add(struct device *dev,
+-			    struct device_attribute *attr,
+-			    const char *buf,
+-			    size_t count);
+ static void __rbd_remove_snap_dev(struct rbd_device *rbd_dev,
+ 				  struct rbd_snap *snap);
+ 
+@@ -469,7 +487,9 @@
+ 	struct rbd_client *rbdc = container_of(kref, struct rbd_client, kref);
+ 
+ 	dout("rbd_release_client %p\n", rbdc);
++	spin_lock(&rbd_client_list_lock);
+ 	list_del(&rbdc->node);
++	spin_unlock(&rbd_client_list_lock);
+ 
+ 	ceph_destroy_client(rbdc->client);
+ 	kfree(rbdc->rbd_opts);
+@@ -482,9 +502,7 @@
+  */
+ static void rbd_put_client(struct rbd_device *rbd_dev)
+ {
+-	spin_lock(&rbd_client_list_lock);
+ 	kref_put(&rbd_dev->rbd_client->kref, rbd_client_release);
+-	spin_unlock(&rbd_client_list_lock);
+ 	rbd_dev->rbd_client = NULL;
+ }
+ 
+@@ -517,7 +535,7 @@
+ 
+ 	snap_count = le32_to_cpu(ondisk->snap_count);
+ 	header->snapc = kmalloc(sizeof(struct ceph_snap_context) +
+-				snap_count * sizeof (*ondisk),
++				snap_count * sizeof(u64),
+ 				gfp_flags);
+ 	if (!header->snapc)
+ 		return -ENOMEM;
+@@ -609,17 +612,18 @@
+ 			snapc->seq = header->snap_seq;
+ 		else
+ 			snapc->seq = 0;
+-		dev->cur_snap = 0;
+-		dev->read_only = 0;
++		dev->snap_id = CEPH_NOSNAP;
++		dev->snap_exists = false;
++		dev->read_only = dev->rbd_client->rbd_opts->read_only;
+ 		if (size)
+ 			*size = header->image_size;
+ 	} else {
+ 		ret = snap_by_name(header, dev->snap_name, &snapc->seq, size);
+ 		if (ret < 0)
+ 			goto done;
+-
+-		dev->cur_snap = header->total_snaps - ret;
+-		dev->read_only = 1;
++		dev->snap_id = snapc->seq;
++		dev->snap_exists = true;
++		dev->read_only = true;	/* No choice for snapshots */
+ 	}
+ 
+ 	ret = 0;
+@@ -908,13 +912,10 @@
+ 
+ 	dout("rbd_do_request obj=%s ofs=%lld len=%lld\n", obj, len, ofs);
+ 
+-	down_read(&dev->header_rwsem);
+-
+ 	osdc = &dev->rbd_client->client->osdc;
+ 	req = ceph_osdc_alloc_request(osdc, flags, snapc, ops,
+ 					false, GFP_NOIO, pages, bio);
+ 	if (!req) {
+-		up_read(&dev->header_rwsem);
+ 		ret = -ENOMEM;
+ 		goto done_pages;
+ 	}
+@@ -941,15 +942,15 @@
+ 	layout->fl_object_size = cpu_to_le32(1 << RBD_MAX_OBJ_ORDER);
+ 	layout->fl_pg_preferred = cpu_to_le32(-1);
+ 	layout->fl_pg_pool = cpu_to_le32(dev->poolid);
+-	ceph_calc_raw_layout(osdc, layout, snapid, ofs, &len, &bno,
+-				req, ops);
++	ret = ceph_calc_raw_layout(osdc, layout, snapid, ofs, &len, &bno,
++				   req, ops);
++	BUG_ON(ret != 0);
+ 
+ 	ceph_osdc_build_request(req, ofs, &len,
+ 				ops,
+ 				snapc,
+ 				&mtime,
+ 				req->r_oid, req->r_oid_len);
+-	up_read(&dev->header_rwsem);
+ 
+ 	if (linger_req) {
+ 		ceph_osdc_set_request_linger(osdc, req);
+@@ -1244,12 +1246,13 @@
+ 		notify_id, (int)opcode);
+ 	mutex_lock_nested(&ctl_mutex, SINGLE_DEPTH_NESTING);
+ 	rc = __rbd_update_snaps(dev);
++	hver = dev->header.obj_version;
+ 	mutex_unlock(&ctl_mutex);
+ 	if (rc)
+ 		pr_warning(RBD_DRV_NAME "%d got notification but failed to "
+ 			   " update snaps: %d\n", dev->major, rc);
+ 
+-	rbd_req_sync_notify_ack(dev, ver, notify_id, dev->obj_md_name);
++	rbd_req_sync_notify_ack(dev, hver, notify_id, dev->obj_md_name);
+ }
+ 
+ /*
+@@ -1326,71 +1329,7 @@
+ 	return ret;
+ }
+ 
+-struct rbd_notify_info {
+-	struct rbd_device *dev;
+-};
+-
+-static void rbd_notify_cb(u64 ver, u64 notify_id, u8 opcode, void *data)
+-{
+-	struct rbd_device *dev = (struct rbd_device *)data;
+-	if (!dev)
+-		return;
+-
+-	dout("rbd_notify_cb %s notify_id=%lld opcode=%d\n", dev->obj_md_name,
+-		notify_id, (int)opcode);
+-}
+-
+-/*
+- * Request sync osd notify
+- */
+-static int rbd_req_sync_notify(struct rbd_device *dev,
+-		          const char *obj)
+-{
+-	struct ceph_osd_req_op *ops;
+-	struct ceph_osd_client *osdc = &dev->rbd_client->client->osdc;
+-	struct ceph_osd_event *event;
+-	struct rbd_notify_info info;
+-	int payload_len = sizeof(u32) + sizeof(u32);
+-	int ret;
+-
+-	ret = rbd_create_rw_ops(&ops, 1, CEPH_OSD_OP_NOTIFY, payload_len);
+-	if (ret < 0)
+-		return ret;
+-
+-	info.dev = dev;
+-
+-	ret = ceph_osdc_create_event(osdc, rbd_notify_cb, 1,
+-				     (void *)&info, &event);
+-	if (ret < 0)
+-		goto fail;
+-
+-	ops[0].watch.ver = 1;
+-	ops[0].watch.flag = 1;
+-	ops[0].watch.cookie = event->cookie;
+-	ops[0].watch.prot_ver = RADOS_NOTIFY_VER;
+-	ops[0].watch.timeout = 12;
+-
+-	ret = rbd_req_sync_op(dev, NULL,
+-			       CEPH_NOSNAP,
+-			       0,
+-			       CEPH_OSD_FLAG_WRITE | CEPH_OSD_FLAG_ONDISK,
+-			       ops,
+-			       1, obj, 0, 0, NULL, NULL, NULL);
+-	if (ret < 0)
+-		goto fail_event;
+-
+-	ret = ceph_osdc_wait_event(event, CEPH_OSD_TIMEOUT_DEFAULT);
+-	dout("ceph_osdc_wait_event returned %d\n", ret);
+-	rbd_destroy_ops(ops);
+-	return 0;
+-
+-fail_event:
+-	ceph_osdc_cancel_event(event);
+-fail:
+-	rbd_destroy_ops(ops);
+-	return ret;
+-}
+-
++#if 0
+ /*
+  * Request sync osd read
+  */
+@@ -1513,6 +1468,7 @@
+ 		if (!coll) {
+ 			spin_lock_irq(q->queue_lock);
+ 			__blk_end_request_all(rq, -ENOMEM);
++			ceph_put_snap_context(snapc);
+ 			continue;
+ 		}
+ 
+@@ -1559,6 +1515,8 @@
+ 		if (bp)
+ 			bio_pair_release(bp);
+ 		spin_lock_irq(q->queue_lock);
++
++		ceph_put_snap_context(snapc);
+ 	}
+ }
+ 
+@@ -1662,55 +1620,6 @@
+ 	return rc;
+ }
+ 
+-/*
+- * create a snapshot
+- */
+-static int rbd_header_add_snap(struct rbd_device *dev,
+-			       const char *snap_name,
+-			       gfp_t gfp_flags)
+-{
+-	int name_len = strlen(snap_name);
+-	u64 new_snapid;
+-	int ret;
+-	void *data, *p, *e;
+-	u64 ver;
+-	struct ceph_mon_client *monc;
+-
+-	/* we should create a snapshot only if we're pointing at the head */
+-	if (dev->cur_snap)
+-		return -EINVAL;
+-
+-	monc = &dev->rbd_client->client->monc;
+-	ret = ceph_monc_create_snapid(monc, dev->poolid, &new_snapid);
+-	dout("created snapid=%lld\n", new_snapid);
+-	if (ret < 0)
+-		return ret;
+-
+-	data = kmalloc(name_len + 16, gfp_flags);
+-	if (!data)
+-		return -ENOMEM;
+-
+-	p = data;
+-	e = data + name_len + 16;
+-
+-	ceph_encode_string_safe(&p, e, snap_name, name_len, bad);
+-	ceph_encode_64_safe(&p, e, new_snapid, bad);
+-
+-	ret = rbd_req_sync_exec(dev, dev->obj_md_name, "rbd", "snap_add",
+-				data, p - data, &ver);
+-
+-	kfree(data);
+-
+-	if (ret < 0)
+-		return ret;
+-
+-	dev->header.snapc->seq =  new_snapid;
+-
+-	return 0;
+-bad:
+-	return -ERANGE;
+-}
+-
+ static void __rbd_remove_all_snaps(struct rbd_device *rbd_dev)
+ {
+ 	struct rbd_snap *snap;
+@@ -1735,10 +1644,15 @@
+ 	if (ret < 0)
+ 		return ret;
+ 
++	down_write(&rbd_dev->header_rwsem);
++
+ 	/* resized? */
+-	set_capacity(rbd_dev->disk, h.image_size / SECTOR_SIZE);
++	if (rbd_dev->snap_id == CEPH_NOSNAP) {
++		sector_t size = (sector_t) h.image_size / SECTOR_SIZE;
+ 
+-	down_write(&rbd_dev->header_rwsem);
++		dout("setting size to %llu sectors", (unsigned long long) size);
++		set_capacity(rbd_dev->disk, size);
++	}
+ 
+ 	snap_seq = rbd_dev->header.snapc->seq;
+ 	if (rbd_dev->header.total_snaps &&
+@@ -1856,8 +1772,13 @@
+ 			     struct device_attribute *attr, char *buf)
+ {
+ 	struct rbd_device *rbd_dev = dev_to_rbd_dev(dev);
++	sector_t size;
++
++	down_read(&rbd_dev->header_rwsem);
++	size = get_capacity(rbd_dev->disk);
++	up_read(&rbd_dev->header_rwsem);
+ 
+-	return sprintf(buf, "%llu\n", (unsigned long long)rbd_dev->header.image_size);
++	return sprintf(buf, "%llu\n", (unsigned long long) size * SECTOR_SIZE);
+ }
+ 
+ static ssize_t rbd_major_show(struct device *dev,
+@@ -1928,7 +1849,6 @@
+ static DEVICE_ATTR(name, S_IRUGO, rbd_name_show, NULL);
+ static DEVICE_ATTR(refresh, S_IWUSR, NULL, rbd_image_refresh);
+ static DEVICE_ATTR(current_snap, S_IRUGO, rbd_snap_show, NULL);
+-static DEVICE_ATTR(create_snap, S_IWUSR, NULL, rbd_snap_add);
+ 
+ static struct attribute *rbd_attrs[] = {
+ 	&dev_attr_size.attr,
+@@ -1938,7 +1858,6 @@
+ 	&dev_attr_name.attr,
+ 	&dev_attr_current_snap.attr,
+ 	&dev_attr_refresh.attr,
+-	&dev_attr_create_snap.attr,
+ 	NULL
+ };
+ 
+@@ -2262,8 +2188,8 @@
+ 		struct rbd_device *rbd_dev;
+ 
+ 		rbd_dev = list_entry(tmp, struct rbd_device, node);
+-		if (rbd_id > max_id)
+-			max_id = rbd_id;
++		if (rbd_dev->id > max_id)
++			max_id = rbd_dev->id;
+ 	}
+ 	spin_unlock(&rbd_dev_list_lock);
+ 
+@@ -2573,47 +2504,6 @@
+ 	return ret;
+ }
+ 
+-static ssize_t rbd_snap_add(struct device *dev,
+-			    struct device_attribute *attr,
+-			    const char *buf,
+-			    size_t count)
+-{
+-	struct rbd_device *rbd_dev = dev_to_rbd_dev(dev);
+-	int ret;
+-	char *name = kmalloc(count + 1, GFP_KERNEL);
+-	if (!name)
+-		return -ENOMEM;
+-
+-	snprintf(name, count, "%s", buf);
+-
+-	mutex_lock_nested(&ctl_mutex, SINGLE_DEPTH_NESTING);
+-
+-	ret = rbd_header_add_snap(rbd_dev,
+-				  name, GFP_KERNEL);
+-	if (ret < 0)
+-		goto err_unlock;
+-
+-	ret = __rbd_update_snaps(rbd_dev);
+-	if (ret < 0)
+-		goto err_unlock;
+-
+-	/* shouldn't hold ctl_mutex when notifying.. notify might
+-	   trigger a watch callback that would need to get that mutex */
+-	mutex_unlock(&ctl_mutex);
+-
+-	/* make a best effort, don't error if failed */
+-	rbd_req_sync_notify(rbd_dev, rbd_dev->obj_md_name);
+-
+-	ret = count;
+-	kfree(name);
+-	return ret;
+-
+-err_unlock:
+-	mutex_unlock(&ctl_mutex);
+-	kfree(name);
+-	return ret;
+-}
+-
+ /*
+  * create control files in sysfs
+  * /sys/bus/rbd/...

@@ -1,0 +1,29 @@
+--- mm/compaction.c
++++ mm/compaction.c
+@@ -733,7 +730,7 @@
+ }
+ 
+ /* Compact all nodes in the system */
+-static void compact_nodes(void)
++static int compact_nodes(void)
+ {
+ 	int nid;
+ 
+@@ -742,6 +739,8 @@
+ 
+ 	for_each_online_node(nid)
+ 		compact_node(nid);
++
++	return COMPACT_COMPLETE;
+ }
+ 
+ /* The written value is actually unused, all memory is compacted */
+@@ -752,7 +751,7 @@
+ 			void __user *buffer, size_t *length, loff_t *ppos)
+ {
+ 	if (write)
+-		compact_nodes();
++		return compact_nodes();
+ 
+ 	return 0;
+ }

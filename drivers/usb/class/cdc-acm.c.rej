@@ -1,0 +1,66 @@
+--- drivers/usb/class/cdc-acm.c
++++ drivers/usb/class/cdc-acm.c
+@@ -788,6 +796,10 @@
+ 	tmp.flags = ASYNC_LOW_LATENCY;
+ 	tmp.xmit_fifo_size = acm->writesize;
+ 	tmp.baud_base = le32_to_cpu(acm->line.dwDTERate);
++	tmp.close_delay	= acm->port.close_delay / 10;
++	tmp.closing_wait = acm->port.closing_wait == ASYNC_CLOSING_WAIT_NONE ?
++				ASYNC_CLOSING_WAIT_NONE :
++				acm->port.closing_wait / 10;
+ 
+ 	if (copy_to_user(info, &tmp, sizeof(tmp)))
+ 		return -EFAULT;
+@@ -852,10 +898,6 @@
+ 	2500000, 3000000, 3500000, 4000000
+ };
+ 
+-static const __u8 acm_tty_size[] = {
+-	5, 6, 7, 8
+-};
+-
+ static void acm_tty_set_termios(struct tty_struct *tty,
+ 						struct ktermios *termios_old)
+ {
+@@ -869,7 +911,21 @@
+ 	newline.bParityType = termios->c_cflag & PARENB ?
+ 				(termios->c_cflag & PARODD ? 1 : 2) +
+ 				(termios->c_cflag & CMSPAR ? 2 : 0) : 0;
+-	newline.bDataBits = acm_tty_size[(termios->c_cflag & CSIZE) >> 4];
++	switch (termios->c_cflag & CSIZE) {
++	case CS5:
++		newline.bDataBits = 5;
++		break;
++	case CS6:
++		newline.bDataBits = 6;
++		break;
++	case CS7:
++		newline.bDataBits = 7;
++		break;
++	case CS8:
++	default:
++		newline.bDataBits = 8;
++		break;
++	}
+ 	/* FIXME: Needs to clear unsupported bits in the termios */
+ 	acm->clocal = ((termios->c_cflag & CLOCAL) != 0);
+ 
+@@ -1138,7 +1194,8 @@
+ 	}
+ 
+ 
+-	if (data_interface->cur_altsetting->desc.bNumEndpoints < 2)
++	if (data_interface->cur_altsetting->desc.bNumEndpoints < 2 ||
++	    control_interface->cur_altsetting->desc.bNumEndpoints == 0)
+ 		return -EINVAL;
+ 
+ 	epctrl = &control_interface->cur_altsetting->endpoint[0].desc;
+@@ -1267,7 +1324,7 @@
+ 
+ 		if (usb_endpoint_xfer_int(epwrite))
+ 			usb_fill_int_urb(snd->urb, usb_dev,
+-				usb_sndbulkpipe(usb_dev, epwrite->bEndpointAddress),
++				usb_sndintpipe(usb_dev, epwrite->bEndpointAddress),
+ 				NULL, acm->writesize, acm_write_bulk, snd, epwrite->bInterval);
+ 		else
+ 			usb_fill_bulk_urb(snd->urb, usb_dev,

@@ -1,0 +1,18 @@
+--- drivers/gpu/drm/radeon/radeon_cursor.c
++++ drivers/gpu/drm/radeon/radeon_cursor.c
+@@ -263,8 +264,14 @@
+ 				if (!(cursor_end & 0x7f))
+ 					w--;
+ 			}
+-			if (w <= 0)
++			if (w <= 0) {
+ 				w = 1;
++				cursor_end = x - xorigin + w;
++				if (!(cursor_end & 0x7f)) {
++					x--;
++					WARN_ON_ONCE(x < 0);
++				}
++			}
+ 		}
+ 	}
+ 

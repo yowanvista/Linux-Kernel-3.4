@@ -1,0 +1,26 @@
+--- fs/ceph/inode.c
++++ fs/ceph/inode.c
+@@ -1498,15 +1503,18 @@
+ 	truncate_inode_pages(inode->i_mapping, to);
+ 
+ 	spin_lock(&ci->i_ceph_lock);
+-	ci->i_truncate_pending--;
+-	if (ci->i_truncate_pending == 0)
+-		wake = 1;
++	if (to == ci->i_truncate_size) {
++		ci->i_truncate_pending = 0;
++		finish = 1;
++	}
+ 	spin_unlock(&ci->i_ceph_lock);
++	if (!finish)
++		goto retry;
+ 
+ 	if (wrbuffer_refs == 0)
+ 		ceph_check_caps(ci, CHECK_CAPS_AUTHONLY, NULL);
+-	if (wake)
+-		wake_up_all(&ci->i_cap_wq);
++
++	wake_up_all(&ci->i_cap_wq);
+ }
+ 
+ 

@@ -1,0 +1,20 @@
+--- drivers/pci/hotplug/pciehp_ctrl.c
++++ drivers/pci/hotplug/pciehp_ctrl.c
+@@ -344,7 +344,7 @@
+ 		kfree(info);
+ 		goto out;
+ 	}
+-	queue_work(pciehp_wq, &info->work);
++	queue_work(p_slot->wq, &info->work);
+  out:
+ 	mutex_unlock(&p_slot->lock);
+ }
+@@ -439,7 +439,7 @@
+ 	else
+ 		p_slot->state = POWERON_STATE;
+ 
+-	queue_work(pciehp_wq, &info->work);
++	queue_work(p_slot->wq, &info->work);
+ }
+ 
+ static void interrupt_event_handler(struct work_struct *work)

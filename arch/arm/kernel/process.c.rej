@@ -1,0 +1,10 @@
+--- arch/arm/kernel/process.c
++++ arch/arm/kernel/process.c
+@@ -289,6 +290,7 @@
+ 
+ 	/* Whoops - the platform was unable to reboot. Tell the user! */
+ 	printk("Reboot failed -- System halted\n");
++	local_irq_disable();
+ 	while (1);
+ }
+ 

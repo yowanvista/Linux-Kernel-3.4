@@ -1,0 +1,129 @@
+--- drivers/tty/serial/pch_uart.c
++++ drivers/tty/serial/pch_uart.c
+@@ -252,6 +252,9 @@
+ 	dma_addr_t			rx_buf_dma;
+ 
+ 	struct dentry	*debugfs;
++
++	/* protect the eg20t_port private structure and io access to membase */
++	spinlock_t lock;
+ };
+ 
+ /**
+@@ -754,7 +757,8 @@
+ 		tty_flip_buffer_push(tty);
+ 	tty_kref_put(tty);
+ 	async_tx_ack(priv->desc_rx);
+-	pch_uart_hal_enable_interrupt(priv, PCH_UART_HAL_RX_INT);
++	pch_uart_hal_enable_interrupt(priv, PCH_UART_HAL_RX_INT |
++					    PCH_UART_HAL_RX_ERR_INT);
+ }
+ 
+ static void pch_dma_tx_complete(void *arg)
+@@ -809,7 +813,8 @@
+ 	int rx_size;
+ 	int ret;
+ 	if (!priv->start_rx) {
+-		pch_uart_hal_disable_interrupt(priv, PCH_UART_HAL_RX_INT);
++		pch_uart_hal_disable_interrupt(priv, PCH_UART_HAL_RX_INT |
++						     PCH_UART_HAL_RX_ERR_INT);
+ 		return 0;
+ 	}
+ 	buf = &priv->rxbuf;
+@@ -1071,11 +1076,13 @@
+ 		case PCH_UART_IID_RDR:	/* Received Data Ready */
+ 			if (priv->use_dma) {
+ 				pch_uart_hal_disable_interrupt(priv,
+-							PCH_UART_HAL_RX_INT);
++						PCH_UART_HAL_RX_INT |
++						PCH_UART_HAL_RX_ERR_INT);
+ 				ret = dma_handle_rx(priv);
+ 				if (!ret)
+ 					pch_uart_hal_enable_interrupt(priv,
+-							PCH_UART_HAL_RX_INT);
++						PCH_UART_HAL_RX_INT |
++						PCH_UART_HAL_RX_ERR_INT);
+ 			} else {
+ 				ret = handle_rx(priv);
+ 			}
+@@ -1199,7 +1206,8 @@
+ 	struct eg20t_port *priv;
+ 	priv = container_of(port, struct eg20t_port, port);
+ 	priv->start_rx = 0;
+-	pch_uart_hal_disable_interrupt(priv, PCH_UART_HAL_RX_INT);
++	pch_uart_hal_disable_interrupt(priv, PCH_UART_HAL_RX_INT |
++					     PCH_UART_HAL_RX_ERR_INT);
+ 	priv->int_dis_flag = 1;
+ }
+ 
+@@ -1255,6 +1263,7 @@
+ 		break;
+ 	case 16:
+ 		fifo_size = PCH_UART_HAL_FIFO16;
++		break;
+ 	case 1:
+ 	default:
+ 		fifo_size = PCH_UART_HAL_FIFO_DIS;
+@@ -1292,7 +1301,8 @@
+ 		pch_request_dma(port);
+ 
+ 	priv->start_rx = 1;
+-	pch_uart_hal_enable_interrupt(priv, PCH_UART_HAL_RX_INT);
++	pch_uart_hal_enable_interrupt(priv, PCH_UART_HAL_RX_INT |
++					    PCH_UART_HAL_RX_ERR_INT);
+ 	uart_update_timeout(port, CS8, default_baud);
+ 
+ 	return 0;
+@@ -1350,7 +1360,7 @@
+ 		stb = PCH_UART_HAL_STB1;
+ 
+ 	if (termios->c_cflag & PARENB) {
+-		if (!(termios->c_cflag & PARODD))
++		if (termios->c_cflag & PARODD)
+ 			parity = PCH_UART_HAL_PARITY_ODD;
+ 		else
+ 			parity = PCH_UART_HAL_PARITY_EVEN;
+@@ -1533,8 +1545,9 @@
+ {
+ 	struct eg20t_port *priv;
+ 	unsigned long flags;
++	int priv_locked = 1;
++	int port_locked = 1;
+ 	u8 ier;
+-	int locked = 1;
+ 
+ 	priv = pch_uart_ports[co->index];
+ 
+@@ -1542,12 +1555,16 @@
+ 
+ 	local_irq_save(flags);
+ 	if (priv->port.sysrq) {
+-		/* serial8250_handle_port() already took the lock */
+-		locked = 0;
++		spin_lock(&priv->lock);
++		/* serial8250_handle_port() already took the port lock */
++		port_locked = 0;
+ 	} else if (oops_in_progress) {
+-		locked = spin_trylock(&priv->port.lock);
+-	} else
++		priv_locked = spin_trylock(&priv->lock);
++		port_locked = spin_trylock(&priv->port.lock);
++	} else {
++		spin_lock(&priv->lock);
+ 		spin_lock(&priv->port.lock);
++	}
+ 
+ 	/*
+ 	 *	First save the IER then disable the interrupts
+@@ -1565,8 +1582,10 @@
+ 	wait_for_xmitr(priv, BOTH_EMPTY);
+ 	iowrite8(ier, priv->membase + UART_IER);
+ 
+-	if (locked)
++	if (port_locked)
+ 		spin_unlock(&priv->port.lock);
++	if (priv_locked)
++		spin_unlock(&priv->lock);
+ 	local_irq_restore(flags);
+ }
+ 

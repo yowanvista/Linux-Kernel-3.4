@@ -1,0 +1,29 @@
+--- mm/page-writeback.c
++++ mm/page-writeback.c
+@@ -220,8 +232,8 @@
+ {
+ 	unsigned long x;
+ 
+-	x = global_page_state(NR_FREE_PAGES) + global_reclaimable_pages() -
+-	    dirty_balance_reserve;
++	x = global_page_state(NR_FREE_PAGES) + global_reclaimable_pages();
++	x -= min(x, dirty_balance_reserve);
+ 
+ 	if (!vm_highmem_is_dirtyable)
+ 		x -= highmem_dirtyable_memory(x);
+@@ -288,9 +300,12 @@
+ 	 * highmem zone can hold its share of dirty pages, so we don't
+ 	 * care about vm_highmem_is_dirtyable here.
+ 	 */
+-	return zone_page_state(zone, NR_FREE_PAGES) +
+-	       zone_reclaimable_pages(zone) -
+-	       zone->dirty_balance_reserve;
++	unsigned long nr_pages = zone_page_state(zone, NR_FREE_PAGES) +
++		zone_reclaimable_pages(zone);
++
++	/* don't allow this to underflow */
++	nr_pages -= min(nr_pages, zone->dirty_balance_reserve);
++	return nr_pages;
+ }
+ 
+ /**

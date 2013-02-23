@@ -1,0 +1,27 @@
+--- drivers/net/wireless/ath/ath9k/main.c
++++ drivers/net/wireless/ath/ath9k/main.c
+@@ -1138,7 +1129,7 @@
+ 
+ 	return;
+ exit:
+-	ieee80211_free_txskb(hw, skb);
++	dev_kfree_skb_any(skb);
+ }
+ 
+ static void ath9k_stop(struct ieee80211_hw *hw)
+@@ -1419,6 +1410,15 @@
+ 		}
+ 	}
+ 
++	if ((ah->opmode == NL80211_IFTYPE_ADHOC) ||
++	    ((vif->type == NL80211_IFTYPE_ADHOC) &&
++	     sc->nvifs > 0)) {
++		ath_err(common, "Cannot create ADHOC interface when other"
++			" interfaces already exist.\n");
++		ret = -EINVAL;
++		goto out;
++	}
++
+ 	ath_dbg(common, CONFIG, "Attach a VIF of type: %d\n", vif->type);
+ 
+ 	sc->nvifs++;

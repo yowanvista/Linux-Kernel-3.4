@@ -1,0 +1,151 @@
+--- kernel/time/timekeeping.c
++++ kernel/time/timekeeping.c
+@@ -70,6 +70,12 @@
+ 	/* The raw monotonic time for the CLOCK_MONOTONIC_RAW posix clock. */
+ 	struct timespec raw_time;
+ 
++	/* Offset clock monotonic -> clock realtime */
++	ktime_t offs_real;
++
++	/* Offset clock monotonic -> clock boottime */
++	ktime_t offs_boot;
++
+ 	/* Seqlock for all timekeeper values */
+ 	seqlock_t lock;
+ };
+@@ -172,6 +178,14 @@
+ 	return clocksource_cyc2ns(cycle_delta, clock->mult, clock->shift);
+ }
+ 
++static void update_rt_offset(void)
++{
++	struct timespec tmp, *wtm = &timekeeper.wall_to_monotonic;
++
++	set_normalized_timespec(&tmp, -wtm->tv_sec, -wtm->tv_nsec);
++	timekeeper.offs_real = timespec_to_ktime(tmp);
++}
++
+ /* must hold write on timekeeper.lock */
+ static void timekeeping_update(bool clearntp)
+ {
+@@ -179,6 +193,7 @@
+ 		timekeeper.ntp_error = 0;
+ 		ntp_clear();
+ 	}
++	update_rt_offset();
+ 	update_vsyscall(&timekeeper.xtime, &timekeeper.wall_to_monotonic,
+ 			 timekeeper.clock, timekeeper.mult);
+ }
+@@ -370,7 +385,7 @@
+ 	struct timespec ts_delta;
+ 	unsigned long flags;
+ 
+-	if ((unsigned long)tv->tv_nsec >= NSEC_PER_SEC)
++	if (!timespec_valid_strict(tv))
+ 		return -EINVAL;
+ 
+ 	write_seqlock_irqsave(&timekeeper.lock, flags);
+@@ -415,10 +432,17 @@
+ 
+ 	timekeeping_forward_now();
+ 
++	tmp = timespec_add(timekeeper.xtime,  *ts);
++	if (!timespec_valid_strict(&tmp)) {
++		ret = -EINVAL;
++		goto error;
++	}
++
+ 	timekeeper.xtime = timespec_add(timekeeper.xtime, *ts);
+ 	timekeeper.wall_to_monotonic =
+ 				timespec_sub(timekeeper.wall_to_monotonic, *ts);
+ 
++error: /* even if we error out, we forwarded the time, so call update */
+ 	timekeeping_update(true);
+ 
+ 	write_sequnlock_irqrestore(&timekeeper.lock, flags);
+@@ -586,7 +610,20 @@
+ 	struct timespec now, boot;
+ 
+ 	read_persistent_clock(&now);
++	if (!timespec_valid_strict(&now)) {
++		pr_warn("WARNING: Persistent clock returned invalid value!\n"
++			"         Check your CMOS/BIOS settings.\n");
++		now.tv_sec = 0;
++		now.tv_nsec = 0;
++	}
++
+ 	read_boot_clock(&boot);
++	if (!timespec_valid_strict(&boot)) {
++		pr_warn("WARNING: Boot clock returned invalid value!\n"
++			"         Check your CMOS/BIOS settings.\n");
++		boot.tv_sec = 0;
++		boot.tv_nsec = 0;
++	}
+ 
+ 	seqlock_init(&timekeeper.lock);
+ 
+@@ -608,6 +645,7 @@
+ 	}
+ 	set_normalized_timespec(&timekeeper.wall_to_monotonic,
+ 				-boot.tv_sec, -boot.tv_nsec);
++	update_rt_offset();
+ 	timekeeper.total_sleep_time.tv_sec = 0;
+ 	timekeeper.total_sleep_time.tv_nsec = 0;
+ 	write_sequnlock_irqrestore(&timekeeper.lock, flags);
+@@ -640,8 +684,7 @@
+ 	timekeeper.xtime = timespec_add(timekeeper.xtime, *delta);
+ 	timekeeper.wall_to_monotonic =
+ 			timespec_sub(timekeeper.wall_to_monotonic, *delta);
+-	timekeeper.total_sleep_time = timespec_add(
+-					timekeeper.total_sleep_time, *delta);
++	update_sleep_time(timespec_add(timekeeper.total_sleep_time, *delta));
+ }
+ 
+ 
+@@ -706,6 +749,7 @@
+ 	timekeeper.clock->cycle_last = timekeeper.clock->read(timekeeper.clock);
+ 	timekeeper.ntp_error = 0;
+ 	timekeeping_suspended = 0;
++	timekeeping_update(false);
+ 	write_sequnlock_irqrestore(&timekeeper.lock, flags);
+ 
+ 	touch_softlockup_watchdog();
+@@ -972,10 +1016,13 @@
+ 		timekeeper.xtime.tv_sec++;
+ 		leap = second_overflow(timekeeper.xtime.tv_sec);
+ 		timekeeper.xtime.tv_sec += leap;
++		timekeeper.wall_to_monotonic.tv_sec -= leap;
++		if (leap)
++			clock_was_set_delayed();
+ 	}
+ 
+ 	/* Accumulate raw time */
+-	raw_nsecs = timekeeper.raw_interval << shift;
++	raw_nsecs = (u64)timekeeper.raw_interval << shift;
+ 	raw_nsecs += timekeeper.raw_time.tv_nsec;
+ 	if (raw_nsecs >= NSEC_PER_SEC) {
+ 		u64 raw_secs = raw_nsecs;
+@@ -1018,9 +1065,12 @@
+ #else
+ 	offset = (clock->read(clock) - clock->cycle_last) & clock->mask;
+ #endif
++	/* Check if there's really nothing to do */
++	if (offset < timekeeper.cycle_interval)
++		goto out;
++
+ 	timekeeper.xtime_nsec = (s64)timekeeper.xtime.tv_nsec <<
+ 						timekeeper.shift;
+-
+ 	/*
+ 	 * With NO_HZ we may have to accumulate many cycle_intervals
+ 	 * (think "ticks") worth of time at once. To do this efficiently,
+@@ -1087,6 +1137,9 @@
+ 		timekeeper.xtime.tv_sec++;
+ 		leap = second_overflow(timekeeper.xtime.tv_sec);
+ 		timekeeper.xtime.tv_sec += leap;
++		timekeeper.wall_to_monotonic.tv_sec -= leap;
++		if (leap)
++			clock_was_set_delayed();
+ 	}
+ 
+ 	timekeeping_update(false);

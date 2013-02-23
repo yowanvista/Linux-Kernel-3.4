@@ -1,0 +1,12 @@
+--- net/ipv6/tcp_ipv6.c
++++ net/ipv6/tcp_ipv6.c
+@@ -1410,8 +1409,7 @@
+ #endif
+ 
+ 	if (__inet_inherit_port(sk, newsk) < 0) {
+-		inet_csk_prepare_forced_close(newsk);
+-		tcp_done(newsk);
++		sock_put(newsk);
+ 		goto out;
+ 	}
+ 	__inet6_hash(newsk, NULL);

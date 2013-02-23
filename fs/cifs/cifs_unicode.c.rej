@@ -1,0 +1,10 @@
+--- fs/cifs/cifs_unicode.c
++++ fs/cifs/cifs_unicode.c
+@@ -350,6 +372,6 @@
+ 	}
+ 
+ ctoUTF16_out:
+-	return i;
++	return j;
+ }
+ 

@@ -1,0 +1,11 @@
+--- drivers/gpu/drm/radeon/radeon_i2c.c
++++ drivers/gpu/drm/radeon/radeon_i2c.c
+@@ -39,7 +39,7 @@
+  * radeon_ddc_probe
+  *
+  */
+-bool radeon_ddc_probe(struct radeon_connector *radeon_connector)
++bool radeon_ddc_probe(struct radeon_connector *radeon_connector, bool use_aux)
+ {
+ 	u8 out = 0x0;
+ 	u8 buf[8];

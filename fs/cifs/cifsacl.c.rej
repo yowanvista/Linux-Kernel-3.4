@@ -1,0 +1,61 @@
+--- fs/cifs/cifsacl.c
++++ fs/cifs/cifsacl.c
+@@ -361,7 +368,7 @@
+ 	 * any fields of the node after a reference is put .
+ 	 */
+ 	if (test_bit(SID_ID_MAPPED, &psidid->state)) {
+-		memcpy(ssid, &psidid->sid, sizeof(struct cifs_sid));
++		cifs_copy_sid(ssid, &psidid->sid);
+ 		psidid->time = jiffies; /* update ts for accessing */
+ 		goto id_sid_out;
+ 	}
+@@ -377,14 +384,14 @@
+ 		if (IS_ERR(sidkey)) {
+ 			rc = -EINVAL;
+ 			cFYI(1, "%s: Can't map and id to a SID", __func__);
++		} else if (sidkey->datalen < sizeof(struct cifs_sid)) {
++			rc = -EIO;
++			cFYI(1, "%s: Downcall contained malformed key "
++				"(datalen=%hu)", __func__, sidkey->datalen);
+ 		} else {
+ 			lsid = (struct cifs_sid *)sidkey->payload.data;
+-			memcpy(&psidid->sid, lsid,
+-				sidkey->datalen < sizeof(struct cifs_sid) ?
+-				sidkey->datalen : sizeof(struct cifs_sid));
+-			memcpy(ssid, &psidid->sid,
+-				sidkey->datalen < sizeof(struct cifs_sid) ?
+-				sidkey->datalen : sizeof(struct cifs_sid));
++			cifs_copy_sid(&psidid->sid, lsid);
++			cifs_copy_sid(ssid, &psidid->sid);
+ 			set_bit(SID_ID_MAPPED, &psidid->state);
+ 			key_put(sidkey);
+ 			kfree(psidid->sidstr);
+@@ -403,7 +410,7 @@
+ 			return rc;
+ 		}
+ 		if (test_bit(SID_ID_MAPPED, &psidid->state))
+-			memcpy(ssid, &psidid->sid, sizeof(struct cifs_sid));
++			cifs_copy_sid(ssid, &psidid->sid);
+ 		else
+ 			rc = -EINVAL;
+ 	}
+@@ -1113,8 +1106,7 @@
+ 				kfree(nowner_sid_ptr);
+ 				return rc;
+ 			}
+-			memcpy(owner_sid_ptr, nowner_sid_ptr,
+-					sizeof(struct cifs_sid));
++			cifs_copy_sid(owner_sid_ptr, nowner_sid_ptr);
+ 			kfree(nowner_sid_ptr);
+ 			*aclflag = CIFS_ACL_OWNER;
+ 		}
+@@ -1132,8 +1124,7 @@
+ 				kfree(ngroup_sid_ptr);
+ 				return rc;
+ 			}
+-			memcpy(group_sid_ptr, ngroup_sid_ptr,
+-					sizeof(struct cifs_sid));
++			cifs_copy_sid(group_sid_ptr, ngroup_sid_ptr);
+ 			kfree(ngroup_sid_ptr);
+ 			*aclflag = CIFS_ACL_GROUP;
+ 		}

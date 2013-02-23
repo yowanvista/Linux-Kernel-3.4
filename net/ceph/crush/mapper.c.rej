@@ -1,0 +1,20 @@
+--- net/ceph/crush/mapper.c
++++ net/ceph/crush/mapper.c
+@@ -482,12 +491,15 @@
+ 	int osize;
+ 	int *tmp;
+ 	struct crush_rule *rule;
+-	int step;
++	__u32 step;
+ 	int i, j;
+ 	int numrep;
+ 	int firstn;
+ 
+-	BUG_ON(ruleno >= map->max_rules);
++	if ((__u32)ruleno >= map->max_rules) {
++		dprintk(" bad ruleno %d\n", ruleno);
++		return 0;
++	}
+ 
+ 	rule = map->rules[ruleno];
+ 	result_len = 0;

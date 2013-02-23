@@ -1,0 +1,23 @@
+--- fs/jbd2/journal.c
++++ fs/jbd2/journal.c
+@@ -1317,6 +1317,11 @@
+ 
+ 	BUG_ON(!mutex_is_locked(&journal->j_checkpoint_mutex));
+ 	read_lock(&journal->j_state_lock);
++	/* Is it already empty? */
++	if (sb->s_start == 0) {
++		read_unlock(&journal->j_state_lock);
++		return;
++	}
+ 	jbd_debug(1, "JBD2: Marking journal as empty (seq %d)\n",
+ 		  journal->j_tail_sequence);
+ 
+@@ -1340,7 +1345,7 @@
+  * Update a journal's errno.  Write updated superblock to disk waiting for IO
+  * to complete.
+  */
+-static void jbd2_journal_update_sb_errno(journal_t *journal)
++void jbd2_journal_update_sb_errno(journal_t *journal)
+ {
+ 	journal_superblock_t *sb = journal->j_superblock;
+ 

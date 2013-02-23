@@ -1,0 +1,11 @@
+--- drivers/net/wireless/rt2x00/rt2x00dev.c
++++ drivers/net/wireless/rt2x00/rt2x00dev.c
+@@ -628,7 +628,7 @@
+ 	 */
+ 	if (unlikely(rxdesc.size == 0 ||
+ 		     rxdesc.size > entry->queue->data_size)) {
+-		WARNING(rt2x00dev, "Wrong frame size %d max %d.\n",
++		ERROR(rt2x00dev, "Wrong frame size %d max %d.\n",
+ 			rxdesc.size, entry->queue->data_size);
+ 		dev_kfree_skb(entry->skb);
+ 		goto renew_skb;

@@ -1,0 +1,45 @@
+--- drivers/gpu/drm/i915/intel_sdvo.c
++++ drivers/gpu/drm/i915/intel_sdvo.c
+@@ -2495,7 +2462,6 @@
+ 	struct drm_i915_private *dev_priv = dev->dev_private;
+ 	struct intel_encoder *intel_encoder;
+ 	struct intel_sdvo *intel_sdvo;
+-	u32 hotplug_mask;
+ 	int i;
+ 
+ 	intel_sdvo = kzalloc(sizeof(struct intel_sdvo), GFP_KERNEL);
+@@ -2526,17 +2492,10 @@
+ 		}
+ 	}
+ 
+-	hotplug_mask = 0;
+-	if (IS_G4X(dev)) {
+-		hotplug_mask = IS_SDVOB(sdvo_reg) ?
+-			SDVOB_HOTPLUG_INT_STATUS_G4X : SDVOC_HOTPLUG_INT_STATUS_G4X;
+-	} else if (IS_GEN4(dev)) {
+-		hotplug_mask = IS_SDVOB(sdvo_reg) ?
+-			SDVOB_HOTPLUG_INT_STATUS_I965 : SDVOC_HOTPLUG_INT_STATUS_I965;
+-	} else {
+-		hotplug_mask = IS_SDVOB(sdvo_reg) ?
+-			SDVOB_HOTPLUG_INT_STATUS_I915 : SDVOC_HOTPLUG_INT_STATUS_I915;
+-	}
++	if (IS_SDVOB(sdvo_reg))
++		dev_priv->hotplug_supported_mask |= SDVOB_HOTPLUG_INT_STATUS;
++	else
++		dev_priv->hotplug_supported_mask |= SDVOC_HOTPLUG_INT_STATUS;
+ 
+ 	drm_encoder_helper_add(&intel_encoder->base, &intel_sdvo_helper_funcs);
+ 
+@@ -2559,12 +2526,6 @@
+ 		goto err;
+ 	}
+ 
+-	/* Only enable the hotplug irq if we need it, to work around noisy
+-	 * hotplug lines.
+-	 */
+-	if (intel_sdvo->hotplug_active[0])
+-		dev_priv->hotplug_supported_mask |= hotplug_mask;
+-
+ 	intel_sdvo_select_ddc_bus(dev_priv, intel_sdvo, sdvo_reg);
+ 
+ 	/* Set the input timing to the screen. Assume always input 0. */

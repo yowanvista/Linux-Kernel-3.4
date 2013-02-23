@@ -1,0 +1,11 @@
+--- drivers/scsi/mpt2sas/mpt2sas_base.c
++++ drivers/scsi/mpt2sas/mpt2sas_base.c
+@@ -1785,7 +1778,7 @@
+ static inline u8
+ _base_get_msix_index(struct MPT2SAS_ADAPTER *ioc)
+ {
+-	return ioc->cpu_msix_table[raw_smp_processor_id()];
++	return ioc->cpu_msix_table[smp_processor_id()];
+ }
+ 
+ /**

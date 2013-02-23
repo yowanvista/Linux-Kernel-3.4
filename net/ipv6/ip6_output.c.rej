@@ -1,0 +1,15 @@
+--- net/ipv6/ip6_output.c
++++ net/ipv6/ip6_output.c
+@@ -1260,10 +1233,10 @@
+ 		cork->length = 0;
+ 		sk->sk_sndmsg_page = NULL;
+ 		sk->sk_sndmsg_off = 0;
+-		exthdrlen = (opt ? opt->opt_flen : 0);
++		exthdrlen = (opt ? opt->opt_flen : 0) - rt->rt6i_nfheader_len;
+ 		length += exthdrlen;
+ 		transhdrlen += exthdrlen;
+-		dst_exthdrlen = rt->dst.header_len - rt->rt6i_nfheader_len;
++		dst_exthdrlen = rt->dst.header_len;
+ 	} else {
+ 		rt = (struct rt6_info *)cork->dst;
+ 		fl6 = &inet->cork.fl.u.ip6;

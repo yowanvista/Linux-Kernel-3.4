@@ -1,0 +1,73 @@
+--- net/ipv6/addrconf.c
++++ net/ipv6/addrconf.c
+@@ -795,16 +797,10 @@
+ 		struct in6_addr prefix;
+ 		struct rt6_info *rt;
+ 		struct net *net = dev_net(ifp->idev->dev);
+-		struct flowi6 fl6 = {};
+-
+ 		ipv6_addr_prefix(&prefix, &ifp->addr, ifp->prefix_len);
+-		fl6.flowi6_oif = ifp->idev->dev->ifindex;
+-		fl6.daddr = prefix;
+-		rt = (struct rt6_info *)ip6_route_lookup(net, &fl6,
+-							 RT6_LOOKUP_F_IFACE);
++		rt = rt6_lookup(net, &prefix, NULL, ifp->idev->dev->ifindex, 1);
+ 
+-		if (rt != net->ipv6.ip6_null_entry &&
+-		    addrconf_is_prefix_route(rt)) {
++		if (rt && addrconf_is_prefix_route(rt)) {
+ 			if (onlink == 0) {
+ 				ip6_del_rt(rt);
+ 				rt = NULL;
+@@ -1738,7 +1734,7 @@
+ 			continue;
+ 		if ((rt->rt6i_flags & flags) != flags)
+ 			continue;
+-		if ((rt->rt6i_flags & noflags) != 0)
++		if ((noflags != 0) && ((rt->rt6i_flags & flags) != 0))
+ 			continue;
+ 		dst_hold(&rt->dst);
+ 		break;
+@@ -3097,15 +3093,14 @@
+ 		struct hlist_node *n;
+ 		hlist_for_each_entry_rcu_bh(ifa, n, &inet6_addr_lst[state->bucket],
+ 					 addr_lst) {
+-			if (!net_eq(dev_net(ifa->idev->dev), net))
+-				continue;
+ 			/* sync with offset */
+ 			if (p < state->offset) {
+ 				p++;
+ 				continue;
+ 			}
+ 			state->offset++;
+-			return ifa;
++			if (net_eq(dev_net(ifa->idev->dev), net))
++				return ifa;
+ 		}
+ 
+ 		/* prepare for next bucket */
+@@ -3123,20 +3118,18 @@
+ 	struct hlist_node *n = &ifa->addr_lst;
+ 
+ 	hlist_for_each_entry_continue_rcu_bh(ifa, n, addr_lst) {
+-		if (!net_eq(dev_net(ifa->idev->dev), net))
+-			continue;
+ 		state->offset++;
+-		return ifa;
++		if (net_eq(dev_net(ifa->idev->dev), net))
++			return ifa;
+ 	}
+ 
+ 	while (++state->bucket < IN6_ADDR_HSIZE) {
+ 		state->offset = 0;
+ 		hlist_for_each_entry_rcu_bh(ifa, n,
+ 				     &inet6_addr_lst[state->bucket], addr_lst) {
+-			if (!net_eq(dev_net(ifa->idev->dev), net))
+-				continue;
+ 			state->offset++;
+-			return ifa;
++			if (net_eq(dev_net(ifa->idev->dev), net))
++				return ifa;
+ 		}
+ 	}
+ 

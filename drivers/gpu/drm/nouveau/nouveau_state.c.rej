@@ -1,0 +1,12 @@
+--- drivers/gpu/drm/nouveau/nouveau_state.c
++++ drivers/gpu/drm/nouveau/nouveau_state.c
+@@ -527,7 +528,8 @@
+ 	}
+ 
+ 	/* headless mode */
+-	if (nouveau_modeset == 2) {
++	if (nouveau_modeset == 2 ||
++	    (nouveau_modeset < 0 && pclass != PCI_CLASS_DISPLAY_VGA)) {
+ 		engine->display.early_init = nouveau_stub_init;
+ 		engine->display.late_takedown = nouveau_stub_takedown;
+ 		engine->display.create = nouveau_stub_init;

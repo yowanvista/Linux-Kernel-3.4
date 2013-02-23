@@ -1,0 +1,12 @@
+--- mm/slab.c
++++ mm/slab.c
+@@ -1695,9 +1698,6 @@
+ 			BUG();
+ 	mutex_unlock(&cache_chain_mutex);
+ 
+-	/* Annotate slab for lockdep -- annotate the malloc caches */
+-	init_lock_keys();
+-
+ 	/* Done! */
+ 	g_cpucache_up = FULL;
+ 

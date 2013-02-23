@@ -1,0 +1,11 @@
+--- drivers/acpi/processor_driver.c
++++ drivers/acpi/processor_driver.c
+@@ -442,7 +441,7 @@
+ 		/* Normal CPU soft online event */
+ 		} else {
+ 			acpi_processor_ppc_has_changed(pr, 0);
+-			acpi_processor_hotplug(pr);
++			acpi_processor_cst_has_changed(pr);
+ 			acpi_processor_reevaluate_tstate(pr, action);
+ 			acpi_processor_tstate_has_changed(pr);
+ 		}

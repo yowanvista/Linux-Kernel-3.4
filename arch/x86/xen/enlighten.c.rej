@@ -1,0 +1,26 @@
+--- arch/x86/xen/enlighten.c
++++ arch/x86/xen/enlighten.c
+@@ -1103,23 +1086,13 @@
+ 	.read_cr4_safe = native_read_cr4_safe,
+ 	.write_cr4 = xen_write_cr4,
+ 
+-#ifdef CONFIG_X86_64
+-	.read_cr8 = xen_read_cr8,
+-	.write_cr8 = xen_write_cr8,
+-#endif
+-
+ 	.wbinvd = native_wbinvd,
+ 
+ 	.read_msr = native_read_msr_safe,
+-	.rdmsr_regs = native_rdmsr_safe_regs,
+ 	.write_msr = xen_write_msr_safe,
+-	.wrmsr_regs = native_wrmsr_safe_regs,
+-
+ 	.read_tsc = native_read_tsc,
+ 	.read_pmc = native_read_pmc,
+ 
+-	.read_tscp = native_read_tscp,
+-
+ 	.iret = xen_iret,
+ 	.irq_enable_sysexit = xen_sysexit,
+ #ifdef CONFIG_X86_64

@@ -1,0 +1,21 @@
+--- drivers/tty/serial/imx.c
++++ drivers/tty/serial/imx.c
+@@ -1224,6 +1229,9 @@
+ 	struct imx_port *sport = imx_ports[co->index];
+ 	struct imx_port_ucrs old_ucr;
+ 	unsigned int ucr1;
++	unsigned long flags;
++
++	spin_lock_irqsave(&sport->port.lock, flags);
+ 
+ 	/*
+ 	 *	First, save UCR1/2/3 and then disable interrupts
+@@ -1249,6 +1257,8 @@
+ 	while (!(readl(sport->port.membase + USR2) & USR2_TXDC));
+ 
+ 	imx_port_ucrs_restore(&sport->port, &old_ucr);
++
++	spin_unlock_irqrestore(&sport->port.lock, flags);
+ }
+ 
+ /*

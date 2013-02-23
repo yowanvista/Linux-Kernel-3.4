@@ -1,0 +1,10 @@
+--- sound/pci/hda/hda_codec.c
++++ sound/pci/hda/hda_codec.c
+@@ -2279,6 +2281,7 @@
+ 	}
+ 	if (codec->patch_ops.free)
+ 		codec->patch_ops.free(codec);
++	memset(&codec->patch_ops, 0, sizeof(codec->patch_ops));
+ 	snd_hda_jack_tbl_clear(codec);
+ 	codec->proc_widget_hook = NULL;
+ 	codec->spec = NULL;

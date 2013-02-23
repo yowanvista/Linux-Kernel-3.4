@@ -1,0 +1,10 @@
+--- drivers/net/wireless/ath/ath9k/ath9k.h
++++ drivers/net/wireless/ath/ath9k/ath9k.h
+@@ -213,6 +213,7 @@
+ 	enum ath9k_key_type keytype;
+ 	u8 keyix;
+ 	u8 retries;
++	u8 rtscts_rate;
+ };
+ 
+ struct ath_buf_state {

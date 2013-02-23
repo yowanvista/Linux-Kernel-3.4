@@ -1,0 +1,32 @@
+--- fs/proc/base.c
++++ fs/proc/base.c
+@@ -1803,7 +1803,7 @@
+ 			rcu_read_lock();
+ 			file = fcheck_files(files, fd);
+ 			if (file) {
+-				unsigned i_mode, f_mode = file->f_mode;
++				unsigned f_mode = file->f_mode;
+ 
+ 				rcu_read_unlock();
+ 				put_files_struct(files);
+@@ -1819,12 +1819,14 @@
+ 					inode->i_gid = 0;
+ 				}
+ 
+-				i_mode = S_IFLNK;
+-				if (f_mode & FMODE_READ)
+-					i_mode |= S_IRUSR | S_IXUSR;
+-				if (f_mode & FMODE_WRITE)
+-					i_mode |= S_IWUSR | S_IXUSR;
+-				inode->i_mode = i_mode;
++				if (S_ISLNK(inode->i_mode)) {
++					unsigned i_mode = S_IFLNK;
++					if (f_mode & FMODE_READ)
++						i_mode |= S_IRUSR | S_IXUSR;
++					if (f_mode & FMODE_WRITE)
++						i_mode |= S_IWUSR | S_IXUSR;
++					inode->i_mode = i_mode;
++				}
+ 
+ 				security_task_to_inode(task, inode);
+ 				put_task_struct(task);

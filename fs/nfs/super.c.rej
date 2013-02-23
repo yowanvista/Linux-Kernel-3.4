@@ -1,0 +1,28 @@
+--- fs/nfs/super.c
++++ fs/nfs/super.c
+@@ -812,7 +812,7 @@
+ 	int err = 0;
+ 	if (!page)
+ 		return -ENOMEM;
+-	devname = nfs_path(&dummy, root, page, PAGE_SIZE);
++	devname = nfs_path(&dummy, root, page, PAGE_SIZE, 0);
+ 	if (IS_ERR(devname))
+ 		err = PTR_ERR(devname);
+ 	else
+@@ -1138,7 +1138,7 @@
+ {
+ 	kfree(*option);
+ 	*option = match_strdup(args);
+-	return !option;
++	return !*option;
+ }
+ 
+ static int nfs_get_option_ul(substring_t args[], unsigned long *option)
+@@ -1886,6 +1886,7 @@
+ 
+ 		memcpy(sap, &data->addr, sizeof(data->addr));
+ 		args->nfs_server.addrlen = sizeof(data->addr);
++		args->nfs_server.port = ntohs(data->addr.sin_port);
+ 		if (!nfs_verify_server_address(sap))
+ 			goto out_no_address;
+ 

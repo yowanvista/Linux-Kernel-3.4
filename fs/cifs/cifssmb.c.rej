@@ -1,0 +1,20 @@
+--- fs/cifs/cifssmb.c
++++ fs/cifs/cifssmb.c
+@@ -1583,6 +1609,7 @@
+ 	eof_index = eof ? (eof - 1) >> PAGE_CACHE_SHIFT : 0;
+ 	cFYI(1, "eof=%llu eof_index=%lu", eof, eof_index);
+ 
++	cifs_kmap_lock();
+ 	list_for_each_entry_safe(page, tpage, &rdata->pages, lru) {
+ 		if (remaining >= PAGE_CACHE_SIZE) {
+ 			/* enough data to fill the page */
+@@ -2221,7 +2249,9 @@
+ 	 * and set the iov_len properly for each one. It may also set
+ 	 * wdata->bytes too.
+ 	 */
++	cifs_kmap_lock();
+ 	wdata->marshal_iov(iov, wdata);
++	cifs_kmap_unlock();
+ 
+ 	cFYI(1, "async write at %llu %u bytes", wdata->offset, wdata->bytes);
+ 

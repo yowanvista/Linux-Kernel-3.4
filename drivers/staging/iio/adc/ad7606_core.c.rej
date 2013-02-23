@@ -1,0 +1,10 @@
+--- drivers/staging/iio/adc/ad7606_core.c
++++ drivers/staging/iio/adc/ad7606_core.c
+@@ -235,6 +235,7 @@
+ 		.indexed = 1,				\
+ 		.channel = num,				\
+ 		.address = num,				\
++		.info_mask = IIO_CHAN_INFO_SCALE_SHARED_BIT, \
+ 		.scan_index = num,			\
+ 		.scan_type = IIO_ST('s', 16, 16, 0),	\
+ 	}

@@ -1,0 +1,34 @@
+--- net/sunrpc/xprtsock.c
++++ net/sunrpc/xprtsock.c
+@@ -2423,7 +2423,6 @@
+ static struct rpc_xprt_ops xs_local_ops = {
+ 	.reserve_xprt		= xprt_reserve_xprt,
+ 	.release_xprt		= xs_tcp_release_xprt,
+-	.alloc_slot		= xprt_alloc_slot,
+ 	.rpcbind		= xs_local_rpcbind,
+ 	.set_port		= xs_local_set_port,
+ 	.connect		= xs_connect,
+@@ -2440,7 +2439,6 @@
+ 	.set_buffer_size	= xs_udp_set_buffer_size,
+ 	.reserve_xprt		= xprt_reserve_xprt_cong,
+ 	.release_xprt		= xprt_release_xprt_cong,
+-	.alloc_slot		= xprt_alloc_slot,
+ 	.rpcbind		= rpcb_getport_async,
+ 	.set_port		= xs_set_port,
+ 	.connect		= xs_connect,
+@@ -2458,7 +2456,6 @@
+ static struct rpc_xprt_ops xs_tcp_ops = {
+ 	.reserve_xprt		= xprt_reserve_xprt,
+ 	.release_xprt		= xs_tcp_release_xprt,
+-	.alloc_slot		= xprt_lock_and_alloc_slot,
+ 	.rpcbind		= rpcb_getport_async,
+ 	.set_port		= xs_set_port,
+ 	.connect		= xs_connect,
+@@ -2478,7 +2475,6 @@
+ static struct rpc_xprt_ops bc_tcp_ops = {
+ 	.reserve_xprt		= xprt_reserve_xprt,
+ 	.release_xprt		= xprt_release_xprt,
+-	.alloc_slot		= xprt_alloc_slot,
+ 	.rpcbind		= xs_local_rpcbind,
+ 	.buf_alloc		= bc_malloc,
+ 	.buf_free		= bc_free,

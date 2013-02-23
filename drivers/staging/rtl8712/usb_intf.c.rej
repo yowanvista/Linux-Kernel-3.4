@@ -1,0 +1,11 @@
+--- drivers/staging/rtl8712/usb_intf.c
++++ drivers/staging/rtl8712/usb_intf.c
+@@ -102,8 +100,6 @@
+ 	/* - */
+ 	{USB_DEVICE(0x20F4, 0x646B)},
+ 	{USB_DEVICE(0x083A, 0xC512)},
+-	{USB_DEVICE(0x25D4, 0x4CA1)},
+-	{USB_DEVICE(0x25D4, 0x4CAB)},
+ 
+ /* RTL8191SU */
+ 	/* Realtek */

@@ -1,0 +1,18 @@
+--- drivers/block/xen-blkback/common.h
++++ drivers/block/xen-blkback/common.h
+@@ -257,6 +257,7 @@
+ 		break;
+ 	case BLKIF_OP_DISCARD:
+ 		dst->u.discard.flag = src->u.discard.flag;
++		dst->u.discard.id = src->u.discard.id;
+ 		dst->u.discard.sector_number = src->u.discard.sector_number;
+ 		dst->u.discard.nr_sectors = src->u.discard.nr_sectors;
+ 		break;
+@@ -287,6 +288,7 @@
+ 		break;
+ 	case BLKIF_OP_DISCARD:
+ 		dst->u.discard.flag = src->u.discard.flag;
++		dst->u.discard.id = src->u.discard.id;
+ 		dst->u.discard.sector_number = src->u.discard.sector_number;
+ 		dst->u.discard.nr_sectors = src->u.discard.nr_sectors;
+ 		break;

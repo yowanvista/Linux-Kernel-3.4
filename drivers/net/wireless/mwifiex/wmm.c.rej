@@ -1,0 +1,10 @@
+--- drivers/net/wireless/mwifiex/wmm.c
++++ drivers/net/wireless/mwifiex/wmm.c
+@@ -1209,7 +1207,6 @@
+ 
+ 	if (!ptr->is_11n_enabled ||
+ 	    mwifiex_is_ba_stream_setup(priv, ptr, tid) ||
+-	    priv->wps.session_enable ||
+ 	    ((priv->sec_info.wpa_enabled ||
+ 	      priv->sec_info.wpa2_enabled) &&
+ 	     !priv->wpa_is_gtk_set)) {

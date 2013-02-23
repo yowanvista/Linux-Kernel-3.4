@@ -1,0 +1,85 @@
+--- net/ceph/osd_client.c
++++ net/ceph/osd_client.c
+@@ -1098,37 +1110,6 @@
+ 	mutex_lock(&osdc->request_mutex);
+ 
+ 	/*
+-	 * reset osds that appear to be _really_ unresponsive.  this
+-	 * is a failsafe measure.. we really shouldn't be getting to
+-	 * this point if the system is working properly.  the monitors
+-	 * should mark the osd as failed and we should find out about
+-	 * it from an updated osd map.
+-	 */
+-	while (timeout && !list_empty(&osdc->req_lru)) {
+-		req = list_entry(osdc->req_lru.next, struct ceph_osd_request,
+-				 r_req_lru_item);
+-
+-		/* hasn't been long enough since we sent it? */
+-		if (time_before(jiffies, req->r_stamp + timeout))
+-			break;
+-
+-		/* hasn't been long enough since it was acked? */
+-		if (req->r_request->ack_stamp == 0 ||
+-		    time_before(jiffies, req->r_request->ack_stamp + timeout))
+-			break;
+-
+-		BUG_ON(req == last_req && req->r_stamp == last_stamp);
+-		last_req = req;
+-		last_stamp = req->r_stamp;
+-
+-		osd = req->r_osd;
+-		BUG_ON(!osd);
+-		pr_warning(" tid %llu timed out on osd%d, will reset osd\n",
+-			   req->r_tid, osd->o_osd);
+-		__kick_osd_requests(osdc, osd);
+-	}
+-
+-	/*
+ 	 * ping osds that are a bit slow.  this ensures that if there
+ 	 * is a break in the TCP connection we will notice, and reopen
+ 	 * a connection with that osd (from the fault callback).
+@@ -1310,8 +1291,27 @@
+ 
+ 	dout("kick_requests %s\n", force_resend ? " (force resend)" : "");
+ 	mutex_lock(&osdc->request_mutex);
+-	for (p = rb_first(&osdc->requests); p; p = rb_next(p)) {
++	for (p = rb_first(&osdc->requests); p; ) {
+ 		req = rb_entry(p, struct ceph_osd_request, r_node);
++		p = rb_next(p);
++
++		/*
++		 * For linger requests that have not yet been
++		 * registered, move them to the linger list; they'll
++		 * be sent to the osd in the loop below.  Unregister
++		 * the request before re-registering it as a linger
++		 * request to ensure the __map_request() below
++		 * will decide it needs to be sent.
++		 */
++		if (req->r_linger && list_empty(&req->r_linger_item)) {
++			dout("%p tid %llu restart on osd%d\n",
++			     req, req->r_tid,
++			     req->r_osd ? req->r_osd->o_osd : -1);
++			__unregister_request(osdc, req);
++			__register_linger_request(osdc, req);
++			continue;
++		}
++
+ 		err = __map_request(osdc, req, force_resend);
+ 		if (err < 0)
+ 			continue;  /* error */
+@@ -1333,6 +1335,7 @@
+ 		dout("linger req=%p req->r_osd=%p\n", req, req->r_osd);
+ 
+ 		err = __map_request(osdc, req, force_resend);
++		dout("__map_request returned %d\n", err);
+ 		if (err == 0)
+ 			continue;  /* no change and no osd was specified */
+ 		if (err < 0)
+@@ -1411,7 +1415,6 @@
+ 				osdc->osdmap = newmap;
+ 			}
+ 			kick_requests(osdc, 0);
+-			reset_changed_osds(osdc);
+ 		} else {
+ 			dout("ignoring incremental map %u len %d\n",
+ 			     epoch, maplen);

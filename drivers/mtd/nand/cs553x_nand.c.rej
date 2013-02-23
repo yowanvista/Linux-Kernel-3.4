@@ -1,0 +1,11 @@
+--- drivers/mtd/nand/cs553x_nand.c
++++ drivers/mtd/nand/cs553x_nand.c
+@@ -249,8 +250,6 @@
+ 		goto out_ior;
+ 	}
+ 
+-	this->ecc.strength = 1;
+-
+ 	new_mtd->name = kasprintf(GFP_KERNEL, "cs553x_nand_cs%d", cs);
+ 
+ 	cs553x_mtd[cs] = new_mtd;

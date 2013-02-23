@@ -1,0 +1,20 @@
+--- net/socket.c
++++ net/socket.c
+@@ -2605,7 +2608,7 @@
+ 	err = sock_do_ioctl(net, sock, cmd, (unsigned long)&ktv);
+ 	set_fs(old_fs);
+ 	if (!err)
+-		err = compat_put_timeval(up, &ktv);
++		err = compat_put_timeval(&ktv, up);
+ 
+ 	return err;
+ }
+@@ -2621,7 +2624,7 @@
+ 	err = sock_do_ioctl(net, sock, cmd, (unsigned long)&kts);
+ 	set_fs(old_fs);
+ 	if (!err)
+-		err = compat_put_timespec(up, &kts);
++		err = compat_put_timespec(&kts, up);
+ 
+ 	return err;
+ }

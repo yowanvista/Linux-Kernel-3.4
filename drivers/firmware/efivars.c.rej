@@ -1,0 +1,20 @@
+--- drivers/firmware/efivars.c
++++ drivers/firmware/efivars.c
+@@ -1213,7 +1202,7 @@
+ 	printk(KERN_INFO "EFI Variables Facility v%s %s\n", EFIVARS_VERSION,
+ 	       EFIVARS_DATE);
+ 
+-	if (!efi_enabled(EFI_RUNTIME_SERVICES))
++	if (!efi_enabled)
+ 		return 0;
+ 
+ 	/* For now we'll register the efi directory at /sys/firmware/efi */
+@@ -1251,7 +1240,7 @@
+ static void __exit
+ efivars_exit(void)
+ {
+-	if (efi_enabled(EFI_RUNTIME_SERVICES)) {
++	if (efi_enabled) {
+ 		unregister_efivars(&__efivars);
+ 		kobject_put(efi_kobj);
+ 	}

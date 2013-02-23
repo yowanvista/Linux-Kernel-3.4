@@ -1,0 +1,104 @@
+--- net/ceph/mon_client.c
++++ net/ceph/mon_client.c
+@@ -117,8 +117,11 @@
+ static void __close_session(struct ceph_mon_client *monc)
+ {
+ 	dout("__close_session closing mon%d\n", monc->cur_mon);
+-	ceph_con_revoke(monc->con, monc->m_auth);
+-	ceph_con_close(monc->con);
++	ceph_msg_revoke(monc->m_auth);
++	ceph_msg_revoke_incoming(monc->m_auth_reply);
++	ceph_msg_revoke(monc->m_subscribe);
++	ceph_msg_revoke_incoming(monc->m_subscribe_ack);
++	ceph_con_close(&monc->con);
+ 	monc->cur_mon = -1;
+ 	monc->pending_auth = 0;
+ 	ceph_auth_reset(monc->auth);
+@@ -355,12 +371,22 @@
+ 
+ 	if (!client->have_fsid) {
+ 		client->have_fsid = true;
++		if (!had_debugfs_info && have_debugfs_info(monc)) {
++			pr_info("client%lld fsid %pU\n",
++				ceph_client_id(monc->client),
++				&monc->client->fsid);
++			init_debugfs = 1;
++		}
+ 		mutex_unlock(&monc->mutex);
+-		/*
+-		 * do debugfs initialization without mutex to avoid
+-		 * creating a locking dependency
+-		 */
+-		ceph_debugfs_client_init(client);
++
++		if (init_debugfs) {
++			/*
++			 * do debugfs initialization without mutex to avoid
++			 * creating a locking dependency
++			 */
++			ceph_debugfs_client_init(monc->client);
++		}
++
+ 		goto out_unlocked;
+ 	}
+ out:
+@@ -775,19 +803,12 @@
+ 		goto out;
+ 
+ 	/* connection */
+-	monc->con = kmalloc(sizeof(*monc->con), GFP_KERNEL);
+-	if (!monc->con)
+-		goto out_monmap;
+-	ceph_con_init(monc->client->msgr, monc->con);
+-	monc->con->private = monc;
+-	monc->con->ops = &mon_con_ops;
+-
+ 	/* authentication */
+ 	monc->auth = ceph_auth_init(cl->options->name,
+ 				    cl->options->key);
+ 	if (IS_ERR(monc->auth)) {
+ 		err = PTR_ERR(monc->auth);
+-		goto out_con;
++		goto out_monmap;
+ 	}
+ 	monc->auth->want_keys =
+ 		CEPH_ENTITY_TYPE_AUTH | CEPH_ENTITY_TYPE_MON |
+@@ -842,8 +866,6 @@
+ 	ceph_msg_put(monc->m_subscribe_ack);
+ out_auth:
+ 	ceph_auth_destroy(monc->auth);
+-out_con:
+-	monc->con->ops->put(monc->con);
+ out_monmap:
+ 	kfree(monc->monmap);
+ out:
+@@ -859,12 +881,16 @@
+ 	mutex_lock(&monc->mutex);
+ 	__close_session(monc);
+ 
+-	monc->con->private = NULL;
+-	monc->con->ops->put(monc->con);
+-	monc->con = NULL;
+-
+ 	mutex_unlock(&monc->mutex);
+ 
++	/*
++	 * flush msgr queue before we destroy ourselves to ensure that:
++	 *  - any work that references our embedded con is finished.
++	 *  - any osd_client or other work that may reference an authorizer
++	 *    finishes before we shut down the auth subsystem.
++	 */
++	ceph_msgr_flush();
++
+ 	ceph_auth_destroy(monc->auth);
+ 
+ 	ceph_msg_put(monc->m_auth);
+@@ -1027,6 +1070,8 @@
+ 	case CEPH_MSG_MDS_MAP:
+ 	case CEPH_MSG_OSD_MAP:
+ 		m = ceph_msg_new(type, front_len, GFP_NOFS, false);
++		if (!m)
++			return NULL;	/* ENOMEM--return skip == 0 */
+ 		break;
+ 	}
+ 

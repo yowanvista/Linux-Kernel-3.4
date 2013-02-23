@@ -1,0 +1,18 @@
+--- drivers/usb/host/ehci-omap.c
++++ drivers/usb/host/ehci-omap.c
+@@ -242,15 +242,6 @@
+ 
+ 	ehci_reset(omap_ehci);
+ 
+-	ret = usb_add_hcd(hcd, irq, IRQF_SHARED);
+-	if (ret) {
+-		dev_err(dev, "failed to add hcd with err %d\n", ret);
+-		goto err_add_hcd;
+-	}
+-
+-	/* root ports should always stay powered */
+-	ehci_port_power(omap_ehci, 1);
+-
+ 	if (pdata->phy_reset) {
+ 		/* Hold the PHY in RESET for enough time till
+ 		 * PHY is settled and ready

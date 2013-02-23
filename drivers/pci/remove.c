@@ -151,4 +151,3 @@ void pci_stop_bus_device(struct pci_dev *dev)
 EXPORT_SYMBOL(pci_remove_bus_device);
 EXPORT_SYMBOL(pci_remove_behind_bridge);
 EXPORT_SYMBOL_GPL(pci_stop_bus_device);
-

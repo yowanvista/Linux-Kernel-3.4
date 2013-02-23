@@ -683,7 +683,6 @@ int m2p_add_override(unsigned long mfn, struct page *page, bool clear_pte)
 	unsigned long uninitialized_var(address);
 	unsigned level;
 	pte_t *ptep = NULL;
-	int ret = 0;
 
 	pfn = page_to_pfn(page);
 	if (!PageHighMem(page)) {
@@ -736,7 +735,6 @@ int m2p_remove_override(struct page *page, bool clear_pte)
 	unsigned long uninitialized_var(address);
 	unsigned level;
 	pte_t *ptep = NULL;
-	int ret = 0;
 
 	pfn = page_to_pfn(page);
 	mfn = get_phys_to_machine(pfn);

@@ -626,4 +626,3 @@ int opp_init_cpufreq_table(struct device *dev,
 	return 0;
 }
 #endif		/* CONFIG_CPU_FREQ */
-

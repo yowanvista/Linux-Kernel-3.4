@@ -1,0 +1,23 @@
+--- fs/nfs/pnfs.c
++++ fs/nfs/pnfs.c
+@@ -582,20 +579,6 @@
+ 	if (lgp == NULL)
+ 		return NULL;
+ 
+-	/* allocate pages for xdr post processing */
+-	max_resp_sz = server->nfs_client->cl_session->fc_attrs.max_resp_sz;
+-	max_pages = nfs_page_array_len(0, max_resp_sz);
+-
+-	pages = kcalloc(max_pages, sizeof(struct page *), gfp_flags);
+-	if (!pages)
+-		goto out_err_free;
+-
+-	for (i = 0; i < max_pages; i++) {
+-		pages[i] = alloc_page(gfp_flags);
+-		if (!pages[i])
+-			goto out_err_free;
+-	}
+-
+ 	lgp->args.minlength = PAGE_CACHE_SIZE;
+ 	if (lgp->args.minlength > range->length)
+ 		lgp->args.minlength = range->length;

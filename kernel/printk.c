@@ -53,10 +53,6 @@ void asmlinkage __attribute__((weak)) early_printk(const char *fmt, ...)
 
 #define __LOG_BUF_LEN	(1 << CONFIG_LOG_BUF_SHIFT)
 
-#ifdef        CONFIG_DEBUG_LL
-extern void printascii(char *);
-#endif
-
 /* printk's without a loglevel use this.. */
 #define DEFAULT_MESSAGE_LOGLEVEL CONFIG_DEFAULT_MESSAGE_LOGLEVEL
 
@@ -684,19 +680,8 @@ static void call_console_drivers(unsigned start, unsigned end)
 	start_print = start;
 	while (cur_index != end) {
 		if (msg_level < 0 && ((end - cur_index) > 2)) {
-			/*
-			 * prepare buf_prefix, as a contiguous array,
-			 * to be processed by log_prefix function
-			 */
-			char buf_prefix[SYSLOG_PRI_MAX_LENGTH+1];
-			unsigned i;
-			for (i = 0; i < ((end - cur_index)) && (i < SYSLOG_PRI_MAX_LENGTH); i++) {
-				buf_prefix[i] = LOG_BUF(cur_index + i);
-			}
-			buf_prefix[i] = '\0'; /* force '\0' as last string character */
-
 			/* strip log prefix */
-			cur_index += log_prefix((const char *)&buf_prefix, &msg_level, NULL);
+			cur_index += log_prefix(&LOG_BUF(cur_index), &msg_level, NULL);
 			start_print = cur_index;
 		}
 		while (cur_index != end) {
@@ -802,9 +787,9 @@ asmlinkage int printk(const char *fmt, ...)
 	va_list args;
 	int r;
 #ifdef CONFIG_MSM_RTB
-  void *caller = __builtin_return_address(0);
-  
-  uncached_logk_pc(LOGK_LOGBUF, caller, (void *)log_end);
+	void *caller = __builtin_return_address(0);
+
+	uncached_logk_pc(LOGK_LOGBUF, caller, (void *)log_end);
 #endif
 
 #ifdef CONFIG_KGDB_KDB
@@ -941,10 +926,6 @@ asmlinkage int vprintk(const char *fmt, va_list args)
 	printed_len += vscnprintf(printk_buf + printed_len,
 				  sizeof(printk_buf) - printed_len, fmt, args);
 
-
-#ifdef	CONFIG_DEBUG_LL
-	printascii(printk_buf);
-#endif
 
 	p = printk_buf;
 
@@ -1205,12 +1186,11 @@ void resume_console(void)
 
 static void __cpuinit console_flush(struct work_struct *work)
 {
-   console_lock();
-   console_unlock();
+	console_lock();
+	console_unlock();
 }
 
 static __cpuinitdata DECLARE_WORK(console_cpu_notify_work, console_flush);
-
 
 /**
  * console_cpu_notify - print deferred console messages after CPU hotplug
@@ -1236,12 +1216,12 @@ static int __cpuinit console_cpu_notify(struct notifier_block *self,
 	case CPU_UP_CANCELED:
 		console_lock();
 		console_unlock();
-        /* invoked with preemption disabled, so defer */
-        case CPU_DYING:
-        if (!console_trylock())
-          schedule_work(&console_cpu_notify_work);
-        else
-          console_unlock();
+	/* invoked with preemption disabled, so defer */
+	case CPU_DYING:
+		if (!console_trylock())
+			schedule_work(&console_cpu_notify_work);
+		else
+			console_unlock();
 	}
 	return NOTIFY_OK;
 }
@@ -1827,4 +1807,3 @@ void kmsg_dump(enum kmsg_dump_reason reason)
 	rcu_read_unlock();
 }
 #endif
-

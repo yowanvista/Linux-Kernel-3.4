@@ -1,0 +1,25 @@
+--- drivers/mtd/mtdpart.c
++++ drivers/mtd/mtdpart.c
+@@ -709,6 +709,8 @@
+  * partition parsers, specified in @types. However, if @types is %NULL, then
+  * the default list of parsers is used. The default list contains only the
+  * "cmdlinepart" and "ofpart" parsers ATM.
++ * Note: If there are more then one parser in @types, the kernel only takes the
++ * partitions parsed out by the first parser.
+  *
+  * This function may return:
+  * o a negative error code in case of failure
+@@ -733,11 +735,12 @@
+ 		if (!parser)
+ 			continue;
+ 		ret = (*parser->parse_fn)(master, pparts, data);
++		put_partition_parser(parser);
+ 		if (ret > 0) {
+ 			printk(KERN_NOTICE "%d %s partitions found on MTD device %s\n",
+ 			       ret, parser->name, master->name);
++			break;
+ 		}
+-		put_partition_parser(parser);
+ 	}
+ 	return ret;
+ }

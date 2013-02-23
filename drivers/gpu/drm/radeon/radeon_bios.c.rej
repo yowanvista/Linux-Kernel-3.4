@@ -1,0 +1,16 @@
+--- drivers/gpu/drm/radeon/radeon_bios.c
++++ drivers/gpu/drm/radeon/radeon_bios.c
+@@ -183,9 +249,10 @@
+ 	}
+ 
+ 	for (i = 0; i < size / ATRM_BIOS_PAGE; i++) {
+-		ret = radeon_atrm_get_bios_chunk(rdev->bios,
+-						 (i * ATRM_BIOS_PAGE),
+-						 ATRM_BIOS_PAGE);
++		ret = radeon_atrm_call(atrm_handle,
++				       rdev->bios,
++				       (i * ATRM_BIOS_PAGE),
++				       ATRM_BIOS_PAGE);
+ 		if (ret < ATRM_BIOS_PAGE)
+ 			break;
+ 	}

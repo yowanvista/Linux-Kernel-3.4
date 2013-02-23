@@ -1,0 +1,53 @@
+--- net/ipv4/inet_diag.c
++++ net/ipv4/inet_diag.c
+@@ -723,8 +822,10 @@
+ 	r->idiag_inode = 0;
+ #if IS_ENABLED(CONFIG_IPV6)
+ 	if (r->idiag_family == AF_INET6) {
+-		*(struct in6_addr *)r->id.idiag_src = inet6_rsk(req)->loc_addr;
+-		*(struct in6_addr *)r->id.idiag_dst = inet6_rsk(req)->rmt_addr;
++		struct inet_diag_entry entry;
++		inet_diag_req_addrs(sk, req, &entry);
++		memcpy(r->id.idiag_src, entry.saddr, sizeof(struct in6_addr));
++		memcpy(r->id.idiag_dst, entry.daddr, sizeof(struct in6_addr));
+ 	}
+ #endif
+ 	nlh->nlmsg_len = skb_tail_pointer(skb) - b;
+@@ -782,18 +883,7 @@
+ 				continue;
+ 
+ 			if (bc) {
+-				entry.saddr =
+-#if IS_ENABLED(CONFIG_IPV6)
+-					(entry.family == AF_INET6) ?
+-					inet6_rsk(req)->loc_addr.s6_addr32 :
+-#endif
+-					&ireq->loc_addr;
+-				entry.daddr =
+-#if IS_ENABLED(CONFIG_IPV6)
+-					(entry.family == AF_INET6) ?
+-					inet6_rsk(req)->rmt_addr.s6_addr32 :
+-#endif
+-					&ireq->rmt_addr;
++				inet_diag_req_addrs(sk, req, &entry);
+ 				entry.dport = ntohs(ireq->rmt_port);
+ 
+ 				if (!inet_diag_bc_run(bc, &entry))
+@@ -974,13 +1064,16 @@
+ 		struct inet_diag_req_v2 *r, struct nlattr *bc)
+ {
+ 	const struct inet_diag_handler *handler;
++	int err = 0;
+ 
+ 	handler = inet_diag_lock_handler(r->sdiag_protocol);
+ 	if (!IS_ERR(handler))
+ 		handler->dump(skb, cb, r, bc);
++	else
++		err = PTR_ERR(handler);
+ 	inet_diag_unlock_handler(handler);
+ 
+-	return skb->len;
++	return err ? : skb->len;
+ }
+ 
+ static int inet_diag_dump(struct sk_buff *skb, struct netlink_callback *cb)

@@ -1,0 +1,11 @@
+--- arch/powerpc/platforms/pseries/eeh.c
++++ arch/powerpc/platforms/pseries/eeh.c
+@@ -1029,7 +1029,7 @@
+ {
+ 	struct pci_controller *phb;
+ 
+-	if (!dn || !of_node_to_eeh_dev(dn))
++	if (!of_node_to_eeh_dev(dn))
+ 		return;
+ 	phb = of_node_to_eeh_dev(dn)->phb;
+ 

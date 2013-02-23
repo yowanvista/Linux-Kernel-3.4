@@ -1,0 +1,10 @@
+--- drivers/net/wireless/ath/ath9k/hw.c
++++ drivers/net/wireless/ath/ath9k/hw.c
+@@ -676,7 +676,6 @@
+ 	case AR9300_DEVID_AR9340:
+ 	case AR9300_DEVID_AR9580:
+ 	case AR9300_DEVID_AR9462:
+-	case AR9485_DEVID_AR1111:
+ 		break;
+ 	default:
+ 		if (common->bus_ops->ath_bus_type == ATH_USB)

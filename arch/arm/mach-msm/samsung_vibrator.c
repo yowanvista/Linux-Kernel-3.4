@@ -283,7 +283,7 @@ static int vibrator_get_time(struct timed_output_dev *dev)
 {
 	if (hrtimer_active(&vibe_timer)) {
 		ktime_t r = hrtimer_get_remaining(&vibe_timer);
-		return ktime_to_ms(r);
+		return r.tv.sec * 1000 + r.tv.nsec / 1000000;
 	} else
 		return 0;
 }
@@ -299,9 +299,9 @@ static enum hrtimer_restart vibrator_timer_func(struct hrtimer *timer)
 		//printk(KERN_INFO,"[VIB] %s\n",__func__);
 		if(hrtimer_active(&vibe_timer)) {
 				ktime_t r = hrtimer_get_remaining(&vibe_timer);
-				remain = ktime_to_ms(r);
+				remain=r.tv.sec * 1000000 + r.tv.nsec;
 				remain = remain / 1000;
-				if(ktime_to_ms(r) < 0) {
+				if(r.tv.sec < 0) {
 						remain = 0;
 				}
 				//printk(KERN_INFO "[VIB] hrtimer active, remain:%d\n",remain);

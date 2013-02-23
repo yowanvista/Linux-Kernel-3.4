@@ -1,0 +1,10 @@
+--- arch/ia64/kernel/process.c
++++ arch/ia64/kernel/process.c
+@@ -333,6 +335,7 @@
+ 			normal_xtp();
+ #endif
+ 		}
++		rcu_idle_exit();
+ 		schedule_preempt_disabled();
+ 		check_pgt_cache();
+ 		if (cpu_is_offline(cpu))

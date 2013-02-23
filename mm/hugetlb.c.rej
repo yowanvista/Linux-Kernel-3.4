@@ -1,0 +1,42 @@
+--- mm/hugetlb.c
++++ mm/hugetlb.c
+@@ -2406,8 +2381,7 @@
+ 	 * from page cache lookup which is in HPAGE_SIZE units.
+ 	 */
+ 	address = address & huge_page_mask(h);
+-	pgoff = ((address - vma->vm_start) >> PAGE_SHIFT) +
+-			vma->vm_pgoff;
++	pgoff = vma_hugecache_offset(h, vma, address);
+ 	mapping = vma->vm_file->f_dentry->d_inode->i_mapping;
+ 
+ 	/*
+@@ -2991,16 +2960,12 @@
+ 		set_vma_resv_flags(vma, HPAGE_RESV_OWNER);
+ 	}
+ 
+-	if (chg < 0) {
+-		ret = chg;
+-		goto out_err;
+-	}
++	if (chg < 0)
++		return chg;
+ 
+ 	/* There must be enough pages in the subpool for the mapping */
+-	if (hugepage_subpool_get_pages(spool, chg)) {
+-		ret = -ENOSPC;
+-		goto out_err;
+-	}
++	if (hugepage_subpool_get_pages(spool, chg))
++		return -ENOSPC;
+ 
+ 	/*
+ 	 * Check enough hugepages are available for the reservation.
+@@ -3009,7 +2974,7 @@
+ 	ret = hugetlb_acct_memory(h, chg);
+ 	if (ret < 0) {
+ 		hugepage_subpool_put_pages(spool, chg);
+-		goto out_err;
++		return ret;
+ 	}
+ 
+ 	/*

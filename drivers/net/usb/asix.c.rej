@@ -1,0 +1,11 @@
+--- drivers/net/usb/asix.c
++++ drivers/net/usb/asix.c
+@@ -322,7 +323,7 @@
+ 			return 0;
+ 		}
+ 
+-		if ((size > dev->net->mtu + ETH_HLEN) ||
++		if ((size > dev->net->mtu + ETH_HLEN + VLAN_HLEN) ||
+ 		    (size + offset > skb->len)) {
+ 			netdev_err(dev->net, "asix_rx_fixup() Bad RX Length %d\n",
+ 				   size);

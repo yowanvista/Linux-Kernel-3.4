@@ -1,0 +1,13 @@
+--- arch/xtensa/kernel/process.c
++++ arch/xtensa/kernel/process.c
+@@ -111,8 +112,10 @@
+ 
+ 	/* endless idle loop with no priority at all */
+ 	while (1) {
++		rcu_idle_enter();
+ 		while (!need_resched())
+ 			platform_idle();
++		rcu_idle_exit();
+ 		schedule_preempt_disabled();
+ 	}
+ }

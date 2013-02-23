@@ -1,0 +1,11 @@
+--- kernel/signal.c
++++ kernel/signal.c
+@@ -836,7 +830,7 @@
+ 	assert_spin_locked(&t->sighand->siglock);
+ 
+ 	task_set_jobctl_pending(t, JOBCTL_TRAP_NOTIFY);
+-	signal_wake_up(t, t->jobctl & JOBCTL_LISTENING);
++	ptrace_signal_wake_up(t, t->jobctl & JOBCTL_LISTENING);
+ }
+ 
+ /*

@@ -1,0 +1,78 @@
+--- fs/ext4/ialloc.c
++++ fs/ext4/ialloc.c
+@@ -488,10 +488,12 @@
+ 	for (i = 0; i < ngroups; i++) {
+ 		grp = (parent_group + i) % ngroups;
+ 		desc = ext4_get_group_desc(sb, grp, NULL);
+-		grp_free = ext4_free_inodes_count(sb, desc);
+-		if (desc && grp_free && grp_free >= avefreei) {
+-			*group = grp;
+-			return 0;
++		if (desc) {
++			grp_free = ext4_free_inodes_count(sb, desc);
++			if (grp_free && grp_free >= avefreei) {
++				*group = grp;
++				return 0;
++			}
+ 		}
+ 	}
+ 
+@@ -695,6 +697,10 @@
+ 				   "inode=%lu", ino + 1);
+ 			continue;
+ 		}
++		BUFFER_TRACE(inode_bitmap_bh, "get_write_access");
++		err = ext4_journal_get_write_access(handle, inode_bitmap_bh);
++		if (err)
++			goto fail;
+ 		ext4_lock_group(sb, group);
+ 		ret2 = ext4_test_and_set_bit(ino, inode_bitmap_bh->b_data);
+ 		ext4_unlock_group(sb, group);
+@@ -728,7 +739,6 @@
+ 
+ 		BUFFER_TRACE(block_bitmap_bh, "dirty block bitmap");
+ 		err = ext4_handle_dirty_metadata(handle, NULL, block_bitmap_bh);
+-		brelse(block_bitmap_bh);
+ 
+ 		/* recheck and clear flag under lock if we still need to */
+ 		ext4_lock_group(sb, group);
+@@ -740,16 +750,12 @@
+ 								gdp);
+ 		}
+ 		ext4_unlock_group(sb, group);
++		brelse(block_bitmap_bh);
+ 
+ 		if (err)
+ 			goto fail;
+ 	}
+ 
+-	BUFFER_TRACE(inode_bitmap_bh, "get_write_access");
+-	err = ext4_journal_get_write_access(handle, inode_bitmap_bh);
+-	if (err)
+-		goto fail;
+-
+ 	BUFFER_TRACE(group_desc_bh, "get_write_access");
+ 	err = ext4_journal_get_write_access(handle, group_desc_bh);
+ 	if (err)
+@@ -792,11 +798,6 @@
+ 		ext4_unlock_group(sb, group);
+ 	}
+ 
+-	BUFFER_TRACE(inode_bitmap_bh, "call ext4_handle_dirty_metadata");
+-	err = ext4_handle_dirty_metadata(handle, NULL, inode_bitmap_bh);
+-	if (err)
+-		goto fail;
+-
+ 	BUFFER_TRACE(group_desc_bh, "call ext4_handle_dirty_metadata");
+ 	err = ext4_handle_dirty_metadata(handle, NULL, group_desc_bh);
+ 	if (err)
+@@ -1016,7 +1017,8 @@
+ 		if (!bitmap_bh)
+ 			continue;
+ 
+-		x = ext4_count_free(bitmap_bh, EXT4_INODES_PER_GROUP(sb) / 8);
++		x = ext4_count_free(bitmap_bh->b_data,
++				    EXT4_INODES_PER_GROUP(sb) / 8);
+ 		printk(KERN_DEBUG "group %lu: stored = %d, counted = %lu\n",
+ 			(unsigned long) i, ext4_free_inodes_count(sb, gdp), x);
+ 		bitmap_count += x;
