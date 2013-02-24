@@ -86,7 +86,14 @@ config ANDROID_TIMED_GPIO
 
 config ANDROID_LOW_MEMORY_KILLER
 	bool "Android Low Memory Killer"
-	default N
+	default Y
+	---help---
+	  Register processes to be killed when memory is low
+
+config VOKULMK
+	bool "Activate LMK tuning on screen on/off"
+	default Y
+	depends on ANDROID_LOW_MEMORY_KILLER
 	---help---
 	  Register processes to be killed when memory is low
 

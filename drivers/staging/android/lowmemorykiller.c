@@ -38,6 +38,9 @@
 #include <linux/memory.h>
 #include <linux/memory_hotplug.h>
 #include <linux/compaction.h>
+#ifdef CONFIG_VOKULMK
+#include <linux/earlysuspend.h>
+#endif
 
 static uint32_t lowmem_debug_level = 2;
 static int lowmem_adj[6] = {
@@ -46,6 +49,7 @@ static int lowmem_adj[6] = {
 	6,
 	12,
 };
+
 static int lowmem_adj_size = 4;
 static size_t lowmem_minfree[6] = {
 	3 * 700,	/* 8MB */
@@ -53,6 +57,24 @@ static size_t lowmem_minfree[6] = {
 	4 * 1500,	/* 24MB */
 	16 * 1500,	/* 96MB */
 };
+
+#ifdef CONFIG_VOKULMK
+static int lowmem_minfree_screen_on[6] = {
+	3 * 512,	/* 6MB */
+	2 * 1024,	/* 8MB */
+	3 * 1024, 	/* 12MB */
+	4 * 1024,	/* 16MB */
+	16 * 1024,	/* 64MB */
+};
+static int lowmem_minfree_screen_off[6] = {
+	3 * 512,	/* 6MB */
+	2 * 1024,	/* 8MB */
+	3 * 1024, 	/* 12MB */
+	4 * 1024,	/* 16MB */
+	16 * 1024,	/* 64MB */
+};
+#endif
+
 static int lowmem_minfree_size = 4;
 
 static unsigned int offlining;
@@ -233,9 +255,32 @@ static struct shrinker lowmem_shrinker = {
 	.seeks = DEFAULT_SEEKS * 16
 };
 
+#ifdef CONFIG_VOKULMK
+static void low_mem_early_suspend(struct early_suspend *handler)
+{
+	memcpy(lowmem_minfree_screen_on, lowmem_minfree, sizeof(lowmem_minfree));
+	memcpy(lowmem_minfree, lowmem_minfree_screen_off, sizeof(lowmem_minfree_screen_off));
+}
+
+static void low_mem_late_resume(struct early_suspend *handler)
+{
+	memcpy(lowmem_minfree, lowmem_minfree_screen_on, sizeof(lowmem_minfree_screen_on));
+}
+
+static struct early_suspend low_mem_suspend = {
+	.suspend = low_mem_early_suspend,
+	.resume = low_mem_late_resume,
+};
+#endif
+
+
+
 static int __init lowmem_init(void)
 {
 	task_free_register(&task_nb);
+	#ifdef CONFIG_VOKULMK
+	register_early_suspend(&low_mem_suspend);
+	#endif
 	register_shrinker(&lowmem_shrinker);
 #ifdef CONFIG_MEMORY_HOTPLUG
 	hotplug_memory_notifier(lmk_hotplug_callback, 0);
@@ -254,6 +299,10 @@ module_param_array_named(adj, lowmem_adj, int, &lowmem_adj_size,
 			 S_IRUGO | S_IWUSR);
 module_param_array_named(minfree, lowmem_minfree, uint, &lowmem_minfree_size,
 			 S_IRUGO | S_IWUSR);
+#ifdef CONFIG_VOKULMK
+module_param_array_named(minfree_screen_off, lowmem_minfree_screen_off, uint, &lowmem_minfree_size,
+			 S_IRUGO | S_IWUSR);
+#endif
 module_param_named(debug_level, lowmem_debug_level, uint, S_IRUGO | S_IWUSR);
 
 module_init(lowmem_init);
