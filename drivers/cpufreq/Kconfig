@@ -151,6 +151,13 @@ config CPU_FREQ_DEFAULT_GOV_USERSPACE
 	  program shall be able to set the CPU dynamically without having
 	  to enable the userspace governor manually.
 
+config CPU_FREQ_DEFAULT_GOV_NEXUS
+	bool "nexus"
+	select CPU_FREQ_GOV_ONDEMAND
+	select CPU_FREQ_GOV_PERFORMANCE
+	help
+	  Use the CPUFreq governor 'nexus' as default.
+
 endchoice
 
 config CPU_FREQ_GOV_CONSERVATIVE
@@ -296,6 +303,14 @@ config CPU_FREQ_GOV_USERSPACE
 	  For details, take a look at <file:Documentation/cpu-freq/>.
 
 	  If in doubt, say Y.
+
+config CPU_FREQ_GOV_NEXUS
+	tristate "'nexus' cpufreq policy governor"
+	select CPU_FREQ_TABLE
+	help
+	  'nexus' is a governor based on interactive and ondemand created by biagio7xD
+
+	  If in doubt, say N.
 
 menu "x86 CPU frequency scaling drivers"
 depends on X86

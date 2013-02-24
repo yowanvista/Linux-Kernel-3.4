@@ -1388,7 +1388,7 @@ if CPU_FREQ_MSM
 
 config MSM_CPU_FREQ_SET_MIN_MAX
 	bool "Set Min/Max CPU frequencies."
-	default n
+	default y
 	help
 	  Allow setting min and max CPU frequencies. Sysfs can be used
 	  to override these values.
@@ -1396,7 +1396,7 @@ config MSM_CPU_FREQ_SET_MIN_MAX
 config MSM_CPU_FREQ_MAX
 	int "Max CPU Frequency"
 	depends on MSM_CPU_FREQ_SET_MIN_MAX
-	default 384000
+	default 1401600
 
 config MSM_CPU_FREQ_MIN
 	int "Min CPU Frequency"
@@ -1435,17 +1435,17 @@ config MSM_CPU_FREQ_OVERCLOCKING
 endif # CPU_FREQ_MSM
 
 config MSM_MORE_MEMORY
-	bool "Enable 351 MB of free RAM"
+	bool "Enable 397 MB of free RAM"
 	depends on ARCH_MSM7X30
 	default n
 	help
-	  Enabling this option allow to have 351 MB of free ram.
+	  Enabling this option allow to have 397 MB of free ram.
 
 config MSM_CPU_AVS
 	bool "Enable software controlled Adaptive Voltage Scaling (AVS)"
 	depends on (ARCH_MSM_SCORPION && QSD_SVS)
 	depends on ARCH_QSD8X50
-	default n
+	default y
 	select MSM_AVS_HW
 	help
 	  This enables the s/w control of Adaptive Voltage Scaling feature
@@ -1454,7 +1454,7 @@ config MSM_CPU_AVS
 
 config MSM_AVS_HW
 	bool "Enable Adaptive Voltage Scaling (AVS)"
-	default n
+	default y
 	help
 	  Enable AVS hardware to fine tune voltage at each frequency. The
 	  AVS hardware blocks associated with each Qualcomm ARMv7 cores can
