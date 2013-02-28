@@ -464,7 +464,7 @@ static void lcdc_s6e63m0_vreg_config(int on)
         return rc;
     }
 
-    rc = vreg_set_level(vreg_ldo15, 3000);
+    rc = vreg_set_level(vreg_ldo15, 2850);
     if (rc) {
         pr_err("%s: vreg LDO15 set level failed (%d)\n",
                __func__, rc);
