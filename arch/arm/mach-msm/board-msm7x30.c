@@ -6403,7 +6403,7 @@ static void __init msm7x30_init_mmc(void)
 	if (machine_is_msm7x30_fluid()) {
 		msm7x30_sdc1_data.ocr_mask =  MMC_VDD_27_28 | MMC_VDD_28_29;
 		if (msm_sdc1_lvlshft_enable()) {
-			pr_err("%s: could not enable level shift\n");
+			pr_err(": could not enable level shift\n");
 			goto out1;
 		}
 	}
@@ -7016,7 +7016,6 @@ static void __init msm7x30_init(void)
 #endif
 
 	atv_dac_power_init();
-	sensors_ldo_init();
 	hdmi_init_regs();
 	msm_fb_add_devices();
 	msm_pm_set_platform_data(msm_pm_data, ARRAY_SIZE(msm_pm_data));
