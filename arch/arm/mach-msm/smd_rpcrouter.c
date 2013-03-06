@@ -134,6 +134,9 @@ if (smd_rpcrouter_debug_mask & NTFY_MSG) \
 #define NTFY(x...) do { } while (0)
 #endif
 
+#if defined(CONFIG_MACH_ARIESVE) || defined(CONFIG_MACH_ANCORA) || defined(CONFIG_MACH_ANCORA_TMO) || defined(CONFIG_MACH_APACHE)
+extern int power_off_done;
+#endif
 
 static LIST_HEAD(local_endpoints);
 static LIST_HEAD(remote_endpoints);
@@ -1549,6 +1552,12 @@ int msm_rpc_write(struct msm_rpc_endpoint *ept, void *buffer, int count)
 	/* snoop the RPC packet and enforce permissions */
 
 	/* has to have at least the xid and type fields */
+#if defined(CONFIG_MACH_ARIESVE) || defined(CONFIG_MACH_ANCORA) || defined(CONFIG_MACH_ANCORA_TMO) || defined(CONFIG_MACH_APACHE)
+	if(power_off_done) {
+		return 0;
+	}
+#endif
+
 	if (count < (sizeof(uint32_t) * 2)) {
 		printk(KERN_ERR "rr_write: rejecting runt packet\n");
 		return -EINVAL;
@@ -2421,6 +2430,7 @@ void msm_rpcrouter_xprt_notify(struct rpcrouter_xprt *xprt, unsigned event)
 {
 	struct rpcrouter_xprt_info *xprt_info;
 	struct rpcrouter_xprt_work *xprt_work;
+	unsigned long flags;
 
 	/* Workqueue is created in init function which works for all existing
 	 * clients.  If this fails in the future, then it will need to be
@@ -2452,11 +2462,13 @@ void msm_rpcrouter_xprt_notify(struct rpcrouter_xprt *xprt, unsigned event)
 
 	xprt_info = xprt->priv;
 	if (xprt_info) {
+		spin_lock_irqsave(&xprt_info->lock, flags);
 		/* Check read_avail even for OPEN event to handle missed
 		   DATA events while processing the OPEN event*/
 		if (xprt->read_avail() >= xprt_info->need_len)
 			wake_lock(&xprt_info->wakelock);
 		wake_up(&xprt_info->read_wait);
+		spin_unlock_irqrestore(&xprt_info->lock, flags);
 	}
 }
 
