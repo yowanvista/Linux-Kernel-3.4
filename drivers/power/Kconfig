@@ -415,6 +415,41 @@ config PM8921_BMS
 	help
 	  Say Y here to enable support for pm8921 chip bms subdevice
 
+config BATTERY_ANCORA
+	tristate "Ancora battery"
+	depends on MACH_ANCORA
+	default n
+	help
+	  Say Y to enable support for the battery in Samsung Ancora.
+
+config BATTERY_ANCORA_TMO
+	tristate "Ancora TMO battery"
+	depends on MACH_ANCORA_TMO
+	default n
+	help
+	  Say Y to enable support for the battery in Samsung Ancora.
+
+config BATTERY_ARIESVE
+	tristate "Ariesve battery"
+	depends on MACH_ARIESVE
+	default n
+	help
+	  Say Y to enable support for the battery in Samsung ARIESVE.
+
+config CHARGER_SMB328A
+	bool "Enable SMB328A charger driver"
+	default n
+	help
+	  Say Y here to enable support for charger with SMB328A chip
+
+config MAX17043_FUEL_GAUGE
+	tristate "Maxim MAX17040 Fuel Gauge"
+	depends on I2C
+	help
+	  MAX17040 is fuel-gauge systems for lithium-ion (Li+) batteries
+	  in handheld and portable equipment. The MAX17040 is configured
+	  to operate with a single lithium cell
+
 config CHARGER_SMB347
 	tristate "Summit Microelectronics SMB347 Battery Charger"
 	depends on I2C

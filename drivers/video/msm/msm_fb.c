@@ -49,6 +49,11 @@
 #include "mdp.h"
 #include "mdp4.h"
 
+#ifdef CONFIG_FB_MSM_LOGO
+#define INIT_IMAGE_FILE "/ARIESVE.rle"
+#define CHARGING_IMAGE_FILE "/charging.rle"
+#endif
+
 #ifdef CONFIG_FB_MSM_TRIPLE_BUFFER
 #define MSM_FB_NUM	3
 #endif
@@ -907,10 +912,13 @@ static int msm_fb_blank_sub(int blank_mode, struct fb_info *info,
 
 			mfd->op_enable = FALSE;
 			curr_pwr_state = mfd->panel_power_on;
+			msleep(300); // HACK: wait for backlight control
 			mfd->panel_power_on = FALSE;
 			bl_updated = 0;
 
-			msleep(16);
+			/* clean fb to prevent displaying old fb */
+			memset((void *)info->screen_base, 0, info->fix.smem_len);
+
 			ret = pdata->off(mfd->pdev);
 			if (ret)
 				mfd->panel_power_on = curr_pwr_state;
@@ -1473,10 +1481,14 @@ static int msm_fb_register(struct msm_fb_data_type *mfd)
 	     mfd->index, fbi->var.xres, fbi->var.yres, fbi->fix.smem_len);
 
 #ifdef CONFIG_FB_MSM_LOGO
-	/* Flip buffer */
-	if (!load_565rle_image(INIT_IMAGE_FILE, bf_supported))
-		;
+	if (charging_boot) {
+		if (!load_565rle_image(CHARGING_IMAGE_FILE, bf_supported)) ;
+	}
+	else {
+		if (!load_565rle_image(INIT_IMAGE_FILE, bf_supported)) ;
+	}
 #endif
+
 	ret = 0;
 
 #ifdef CONFIG_HAS_EARLYSUSPEND

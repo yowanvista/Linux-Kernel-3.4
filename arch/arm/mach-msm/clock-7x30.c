@@ -1501,11 +1501,18 @@ static struct rcg_clk mdp_clk = {
 
 static struct clk_freq_tbl clk_tbl_mdp_lcdc[] = {
 	F_MND16(       0, gnd,  1,   0,   0),
+#if defined(CONFIG_MACH_ANCORA) || defined(CONFIG_MACH_ANCORA_TMO)
+	F_MND16(24576000, pll3, 3,   1,  10),
+	F_MND16(26482000, pll3, 1,   2,  29),
+	F_MND16(30720000, pll3, 4,   1,   6),
+	F_MND16(40960000, pll3, 2,   1,   9),
+#else
 	F_MND16(24576000, lpxo, 1,   0,   0),
 	F_MND16(30720000, pll3, 4,   1,   6),
 	F_MND16(32768000, pll3, 3,   2,  15),
 	F_MND16(40960000, pll3, 2,   1,   9),
 	F_MND16(73728000, pll3, 2,   1,   5),
+#endif
 	F_END,
 };
 
@@ -2331,7 +2338,20 @@ static struct branch_clk lpa_core_clk = {
 static DEFINE_CLK_PCOM(adsp_clk, ADSP_CLK, 0);
 static DEFINE_CLK_PCOM(codec_ssbi_clk,	CODEC_SSBI_CLK, 0);
 static DEFINE_CLK_PCOM(ebi1_clk, EBI1_CLK, CLKFLAG_MIN);
+#ifdef CONFIG_MACH_ARIESVE
+static struct pcom_clk pbus_clk = {
+		.id = P_PBUS_CLK,
+		.c = {
+		       .ops = &clk_ops_pcom_div2,
+		       .flags = CLKFLAG_MIN |
+		       CLKFLAG_SKIP_AUTO_OFF,
+			   .dbg_name = "pbus_clk",
+		       CLK_INIT(pbus_clk.c),
+		},
+};
+#else
 static DEFINE_CLK_PCOM(ebi1_fixed_clk, EBI1_FIXED_CLK, CLKFLAG_MIN);
+#endif
 static DEFINE_CLK_PCOM(ecodec_clk, ECODEC_CLK, 0);
 static DEFINE_CLK_PCOM(gp_clk, GP_CLK, 0);
 static DEFINE_CLK_PCOM(uart3_clk, UART3_CLK, 0);
@@ -2415,6 +2435,17 @@ static DEFINE_CLK_PCOM(p_axi_rotator_clk, AXI_ROTATOR_CLK, 0);
 static DEFINE_CLK_PCOM(p_rotator_imem_clk, ROTATOR_IMEM_CLK, 0);
 static DEFINE_CLK_PCOM(p_rotator_p_clk, ROTATOR_P_CLK, 0);
 
+#ifdef CONFIG_MACH_ARIESVE
+static DEFINE_CLK_VOTER(ebi_dtv_clk, &pbus_clk.c, 0);
+static DEFINE_CLK_VOTER(ebi_grp_3d_clk, &pbus_clk.c, 0);
+static DEFINE_CLK_VOTER(ebi_grp_2d_clk, &pbus_clk.c, 0);
+static DEFINE_CLK_VOTER(ebi_lcdc_clk, &pbus_clk.c, 0);
+static DEFINE_CLK_VOTER(ebi_mddi_clk, &pbus_clk.c, 0);
+static DEFINE_CLK_VOTER(ebi_tv_clk, &pbus_clk.c, 0);
+static DEFINE_CLK_VOTER(ebi_vcd_clk, &pbus_clk.c, 0);
+static DEFINE_CLK_VOTER(ebi_vfe_clk, &pbus_clk.c, 0);
+static DEFINE_CLK_VOTER(ebi_adm_clk, &pbus_clk.c, 0);
+#else
 static DEFINE_CLK_VOTER(ebi_dtv_clk, &ebi1_fixed_clk.c, 0);
 static DEFINE_CLK_VOTER(ebi_grp_3d_clk, &ebi1_fixed_clk.c, 0);
 static DEFINE_CLK_VOTER(ebi_grp_2d_clk, &ebi1_fixed_clk.c, 0);
@@ -2424,6 +2455,7 @@ static DEFINE_CLK_VOTER(ebi_tv_clk, &ebi1_fixed_clk.c, 0);
 static DEFINE_CLK_VOTER(ebi_vcd_clk, &ebi1_fixed_clk.c, 0);
 static DEFINE_CLK_VOTER(ebi_vfe_clk, &ebi1_fixed_clk.c, 0);
 static DEFINE_CLK_VOTER(ebi_adm_clk, &ebi1_fixed_clk.c, 0);
+#endif
 
 #ifdef CONFIG_DEBUG_FS
 
@@ -2764,7 +2796,11 @@ static struct clk_local_ownership {
 	{ CLK_LOOKUP("adsp_clk",	adsp_clk.c,	NULL) },
 	{ CLK_LOOKUP("codec_ssbi_clk",	codec_ssbi_clk.c,	NULL) },
 	{ CLK_LOOKUP("ebi1_clk",	ebi1_clk.c,	NULL) },
+#ifdef CONFIG_MACH_ARIESVE
+	{ CLK_LOOKUP("pbus_clk",        pbus_clk.c,     NULL) },
+#else
 	{ CLK_LOOKUP("ebi1_fixed_clk",	ebi1_fixed_clk.c,	NULL) },
+#endif
 	{ CLK_LOOKUP("ecodec_clk",	ecodec_clk.c,	NULL) },
 	{ CLK_LOOKUP("core_clk",	gp_clk.c,	"") },
 	{ CLK_LOOKUP("core_clk",	uart3_clk.c,	"msm_serial.2") },

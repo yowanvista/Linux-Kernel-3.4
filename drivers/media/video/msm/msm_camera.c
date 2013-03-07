@@ -3022,6 +3022,83 @@ static long msm_ioctl_control(struct file *filep, unsigned int cmd,
 	case MSM_CAM_IOCTL_GET_CAMERA_INFO:
 		rc = msm_get_camera_info(argp);
 		break;
+#if defined (CONFIG_OEM_CAMERA) 
+	case MSM_CAM_IOCTL_EXT_CONFIG:
+		copy_from_user((void *)&cfg_data, (const void *)argp, sizeof(cfg_data));
+#if defined (CONFIG_MACH_ARIESVE)
+		if(cfg_data.device_id == 0)
+               rc = ce147_sensor_ext_config(argp);
+		else
+	           rc = s5ka3dfx_sensor_ext_config(argp);
+#elif defined (CONFIG_MACH_ANCORA)
+#ifdef CONFIG_SENSOR_S5K5CCAF
+		if(cfg_data.device_id == 0)
+               rc = s5k5ccaf_sensor_ext_config(argp);
+#else
+		if(cfg_data.device_id == 0)
+               rc = s5k4ecgx_sensor_ext_config(argp);
+#endif
+		else
+	        rc = sr030pc30_sensor_ext_config(argp);
+#elif defined (CONFIG_MACH_ANCORA_TMO)
+#ifdef CONFIG_SENSOR_S5K5CCAF
+		if(cfg_data.device_id == 0)
+               rc = s5k5ccaf_sensor_ext_config(argp);
+#else
+		if(cfg_data.device_id == 0)
+               rc = s5k4ecgx_sensor_ext_config(argp);
+#endif
+		else
+	        rc = sr030pc30_sensor_ext_config(argp);
+#elif defined (CONFIG_MACH_APACHE)
+		if(cfg_data.device_id == 0)
+               rc = s5k4ecgx_sensor_ext_config(argp);
+		else
+	        rc = sr130pc10_sensor_ext_config(argp);//pault
+#elif defined (CONFIG_MACH_GODART)
+		if(cfg_data.device_id == 0)
+               rc = s5k4ecgx_sensor_ext_config(argp);
+		//else
+	           //rc = s5ka3dfx_sensor_ext_config(argp);
+#endif
+		break;
+	case MSM_CAM_IOCTL_FIRMWARE_UPDATE:
+#ifdef NOT_USE
+		copy_from_user((void *)&cfg_data, (const void *)argp, sizeof(cfg_data));
+		if(cfg_data.device_id == 0)
+			rc = s5k5aafa_sensor_ext_config(argp);
+		else
+			rc = m5mo_sensor_update_firmware(argp);
+#endif
+		break;
+	case MSM_CAM_IOCTL_READ_VERSION_INFO:
+#if defined (CONFIG_MACH_ARIESVE)
+			rc = ce147_get_fw_data(argp);
+#endif
+#ifdef NOT_USE
+		copy_from_user((void *)&cfg_data, (const void *)argp, sizeof(cfg_data));
+		if(cfg_data.device_id == 0)
+			rc = s5k5aafa_sensor_ext_config(argp);
+		else
+			rc = m5mo_sensor_read_version_info(argp);
+#endif /* NOT_USE */
+		break;
+	case MSM_CAM_IOCTL_READ_MODULE_NAME:
+		printk("msm_ioctl_control : MSM_CAM_IOCTL_READ_MODULE_NAME\n");
+		if(copy_from_user((void *)&info, (const void *)argp, sizeof(info))){
+			printk("%s : failed to copy_from_user ",__func__);
+		}
+#if defined (CONFIG_MACH_ARIESVE)
+		if(info.dev_num)	// front camera
+			memcpy( info.module_name ,"S5KA3DFX", 9);
+		else
+			memcpy( info.module_name ,"CE147", 6);
+#endif
+		if(copy_to_user((void *)argp, (const void *)&info, sizeof(info))){
+			printk("%s : failed to copy_to_user ",__func__);
+		}
+		break;
+#endif
 	default:
 		rc = msm_ioctl_common(pmsm, cmd, argp);
 		break;

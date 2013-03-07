@@ -142,3 +142,8 @@ obj-$(CONFIG_PM_DEVFREQ)	+= devfreq/
 obj-$(CONFIG_MOBICORE_SUPPORT)  += gud/
 
 obj-$(CONFIG_MSM_QDSS)		+= coresight/
+
+obj-$(CONFIG_MACH_ANCORA)	+= sensors_ancora/
+obj-$(CONFIG_MACH_ANCORA_TMO)	+= sensors_ancora/
+obj-$(CONFIG_MACH_ARIESVE)	+= sensors_ariesve/
+
