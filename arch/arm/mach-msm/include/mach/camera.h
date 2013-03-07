@@ -83,20 +83,7 @@ enum vfe_resp_msg {
 	VFE_MSG_STATS_WE, /* AEC + AWB */
 	VFE_MSG_SYNC_TIMER0,
 	VFE_MSG_SYNC_TIMER1,
-	VFE_MSG_SYNC_TIMER2,
-	VFE_MSG_COMMON,
-	VFE_MSG_V32_START,
-	VFE_MSG_V32_START_RECORDING, /* 20 */
-	VFE_MSG_V32_CAPTURE,
-	VFE_MSG_V32_JPEG_CAPTURE,
-	VFE_MSG_OUTPUT_IRQ,
-	VFE_MSG_V2X_PREVIEW,
-	VFE_MSG_V2X_CAPTURE,
-	VFE_MSG_OUTPUT_PRIMARY,
-	VFE_MSG_OUTPUT_SECONDARY,
-	VFE_MSG_OUTPUT_TERTIARY1,
-	VFE_MSG_OUTPUT_TERTIARY2,
-	VFE_MSG_V2X_LIVESHOT_PRIMARY,
+	VFE_MSG_SYNC_TIMER2
 };
 
 enum vpe_resp_msg {
@@ -118,13 +105,9 @@ enum msm_stereo_state {
 };
 
 struct msm_vpe_phy_info {
-	uint32_t sbuf_phy;
-	uint32_t planar0_off;
-	uint32_t planar1_off;
-	uint32_t planar2_off;
-	uint32_t p0_phy;
-	uint32_t p1_phy;
-	uint32_t p2_phy;
+        uint32_t sbuf_phy;
+	uint32_t y_phy;
+        uint32_t cbcr_phy;
 	uint8_t  output_id; /* VFE31_OUTPUT_MODE_PT/S/V */
 	uint32_t frame_id;
 };
@@ -162,12 +145,8 @@ struct msm_camera_csi2_params {
 
 struct msm_vfe_phy_info {
 	uint32_t sbuf_phy;
-	uint32_t planar0_off;
-	uint32_t planar1_off;
-	uint32_t planar2_off;
-	uint32_t p0_phy;
-	uint32_t p1_phy;
-	uint32_t p2_phy;
+	uint32_t y_phy;
+        uint32_t cbcr_phy;
 	uint8_t  output_id; /* VFE31_OUTPUT_MODE_PT/S/V */
 	uint32_t frame_id;
 };
@@ -198,8 +177,8 @@ struct video_crop_t{
 };
 
 struct msm_vpe_buf_info {
-	uint32_t p0_phy;
-	uint32_t p1_phy;
+	uint32_t y_phy;
+        uint32_t cbcr_phy;
 	struct   timespec ts;
 	uint32_t frame_id;
 	struct	 video_crop_t vpe_crop;
@@ -432,7 +411,6 @@ struct msm_pmem_region {
 	unsigned long len;
 	struct file *file;
 	struct msm_pmem_info info;
-	struct ion_handle *handle;
 };
 
 struct axidata {
